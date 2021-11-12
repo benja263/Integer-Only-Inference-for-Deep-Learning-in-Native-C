@@ -59,7 +59,7 @@ def eval_epoch(model, data_loader, loss_fn):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for training a model",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--h_size', help='hidden layer dimensions', nargs='+', type=int, default=[1024, 768, 512, 128])
+    parser.add_argument('--h_size', help='hidden layer dimensions', nargs='+', type=int, default=[64, 32])
     parser.add_argument('--num_epochs', help='number of training epochs', type=int, default=10)
     parser.add_argument('--batch_size', help='batch size', type=int, default=128)
 

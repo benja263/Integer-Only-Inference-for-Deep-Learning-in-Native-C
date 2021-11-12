@@ -21,13 +21,6 @@ def quantize_layer_params(state_dict):
     return amax
 
 
-# def quant_params(model, amax):
-#     with torch.no_grad():
-#         for net_idx in range(0, len(model.net), 2):
-#             value = 127 * (model.net[net_idx].weight.T / amax[f'net.{net_idx}.weight']).T
-#             model.net[net_idx].weight.copy_(torch.clamp(value.round(), min=-127, max=127).to(torch.int8))
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for post-training quantization of a pre-trained model",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)

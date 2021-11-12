@@ -9,7 +9,7 @@ import numpy as np
 from neural_nets import QuantMLP
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Script for post-training quantization of a pre-trained model",
+    parser = argparse.ArgumentParser(description="Script for testing post-training quantization of a pre-trained model",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--filename', help='filename', type=str, default='mlp_mnist_quant.th')
     args = parser.parse_args()
@@ -27,7 +27,7 @@ if __name__ == '__main__':
         transforms.Normalize(
             (0.1307,), (0.3081,))]))
 
-    print('Eval Model on 50 Test Samples')
+    print('Eval Model on 5500 Test Samples')
     rand_numbers = np.random.randint(0, mnist_testset.data.shape[0], 5500)
     samples, labels = mnist_testset.data[rand_numbers], mnist_testset.targets[rand_numbers]
 
