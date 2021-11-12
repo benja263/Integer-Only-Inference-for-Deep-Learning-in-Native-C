@@ -1,0 +1,6 @@
+# Default ignored files
+/shelf/
+*.xml
+*.DS_Store
+*ipynb
+*.gz
