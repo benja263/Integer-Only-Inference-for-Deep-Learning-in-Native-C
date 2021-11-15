@@ -15,9 +15,8 @@ def load_c_lib():
     Load C shared library
     :return:
     """
-    c_lib_path = ctypes.util.find_library(f"{os.path.dirname(os.path.abspath(__file__))}/src/run_nn")
     try:
-        c_lib = ctypes.CDLL(c_lib_path)
+        c_lib = ctypes.CDLL(f"{os.path.dirname(os.path.abspath(__file__))}/src/run_nn.so")
     except OSError:
         print("Unable to load the requested C library")
         sys.exit()
