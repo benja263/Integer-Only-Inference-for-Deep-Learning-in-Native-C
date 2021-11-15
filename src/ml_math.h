@@ -16,7 +16,7 @@
 
 void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsigned int N, const unsigned int K, const unsigned int M);
 
-void _broadcast_mat_vec_mult(float *mat, const float *vec, const unsigned int N, const unsigned int M);
+void _broadcast_mat_vec_add(float *mat, const float *vec, const unsigned int N, const unsigned int M);
 
 void _fxp_broadcast_mat_vec_add(int *mat, const int *vec, const unsigned int N, const unsigned int M);
 

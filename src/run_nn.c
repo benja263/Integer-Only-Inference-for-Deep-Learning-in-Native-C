@@ -21,7 +21,6 @@ void run_mlp(float *x, const unsigned int N, unsigned int *image_class)
     linear_layer(out_h1, net_4_weight, net_4_bias, output, net_4_input,
                   net_4_wx_scale, net_4_bias_scale, 
                   N, 10, 32, 0);
-    
     // get argmax
     argmax_over_cols(output, image_class, N, 10);
 }

@@ -20,7 +20,7 @@ void linear_layer(const float *x, const int8_t *w, const int8_t *b, float *outpu
     dequantize_per_row(tmp_result, output, x_w_amax_dequant, N, M);
     dequantize_bias(b, b_deq, b_amax_dequant, M);
 
-    _mat_vec_add(output, b_deq, N, M);
+    _broadcast_mat_vec_add(output, b_deq, N, M);
 
     if (is_output)
         relu(output, N*M);
@@ -39,7 +39,7 @@ void fxp_linear_layer(const int *x, const int8_t *w, const int8_t *b, int *outpu
     fxp_dequantize_per_row(output, x_w_amax_dequant, N, M);
     fxp_dequantize_bias(b, b_deq, b_amax_dequant, M);
 
-    _fxp_mat_vec_add(output, b_deq, N, M);
+    _fxp_broadcast_mat_vec_add(output, b_deq, N, M);
 
     if (is_output)
         fxp_relu(output, N*M);
