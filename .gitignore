@@ -133,3 +133,6 @@ data/
 *code-workspace
 *.ipynb
 *.json
+*.o
+*.dylib
+*.th

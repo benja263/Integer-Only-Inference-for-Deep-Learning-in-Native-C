@@ -110,4 +110,23 @@ def compute_amax_entropy(hist, bin_edges, num_bits, stride=1):
     return calib_amax
 
 
+def _compute_amax_percentile(calib_hist, calib_bin_edges, percentile):
+    """Returns amax that clips the percentile fraction of collected data"""
+
+    if percentile < 0 or percentile > 100:
+        raise ValueError("Invalid percentile. Must be in range 0 <= percentile <= 100.")
+
+    # If calibrator hasn't collected any data, return none
+    if calib_bin_edges is None and calib_hist is None:
+        return None
+
+    total = calib_hist.sum()
+    cdf = np.cumsum(calib_hist / total)
+    idx = np.searchsorted(cdf, percentile / 100)
+    calib_amax = calib_bin_edges[idx]
+    calib_amax = torch.tensor(calib_amax.item()) #pylint: disable=not-callable
+
+    return calib_amax
+
+
 

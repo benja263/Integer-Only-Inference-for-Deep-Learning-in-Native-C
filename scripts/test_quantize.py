@@ -4,6 +4,7 @@ import torch
 
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
 import numpy as np
 
 from neural_nets import QuantMLP
@@ -27,14 +28,17 @@ if __name__ == '__main__':
         transforms.Normalize(
             (0.1307,), (0.3081,))]))
 
-    print('Eval Model on 5500 Test Samples')
-    rand_numbers = np.random.randint(0, mnist_testset.data.shape[0], 5500)
-    samples, labels = mnist_testset.data[rand_numbers], mnist_testset.targets[rand_numbers]
+    # test_loader = DataLoader(mnist_testset, batch_size=len(mnist_testset.data), num_workers=1, shuffle=False)
+    test_loader = DataLoader(mnist_testset, batch_size=1, num_workers=1, shuffle=False)
 
     with torch.no_grad():
-        logits = model(samples.float(), amax)
-        probs = torch.nn.functional.softmax(logits, dim=1)
-        preds = torch.argmax(probs, dim=1)
-        acc = (preds == labels).sum()
+        acc = 0
+        for samples, labels in test_loader:
+            logits = model(samples, amax)
+            # print(logits)
+            # probs = torch.nn.functional.softmax(logits, dim=1)
+            preds = torch.argmax(logits, dim=1)
+            acc += (preds == labels).sum()
+            break
 
-    print(f"Accuracy: {(acc / 5500.0) * 100.0:.3f}%")
+    print(f"Accuracy: {(acc / len(mnist_testset.data)) * 100.0:.3f}%")
