@@ -14,13 +14,7 @@ def quantize_layer_params(state_dict, percentile=99):
     amax = dict()
     for name, params in state_dict.items():
         print(f"Quantizing: {name}")
-        if 'weight' in name:
-            # if percentile is not None:
-            #     hists = [calib.Histogram() for _ in range(0, len(model.net), 2)]
-            # else:
-            params_amax, _ = params.max(dim=1)
-        else:
-            params_amax = params.max()
+        params_amax, _ = params.max(dim=1)
         amax[name] = params_amax
     return amax
 
@@ -30,12 +24,8 @@ def quant_model_params(state_dict, amax):
     for name, param in state_dict.items():
         param_amax = amax[name]
         # quantize 
-        if 'weight' in name:
-            param = param.T
-        param = param * (127 / param_amax)
-        if 'weight' in name:
-            param = param.T
-        state_dict[name] = torch.clamp(param.round(), min=-127, max=127).to(int)
+        param = param.T * (127 / param_amax)
+        state_dict[name] = torch.clamp(param.round(), min=-127, max=127).to(int).T
     # w = self.quant(self.net[idx].weight.clone().T, amax[f'net.{idx}.weight'])
 
 if __name__ == '__main__':
@@ -52,7 +42,7 @@ if __name__ == '__main__':
 
     model = MLP(in_dim=28*28, h_size=h_size, out_dim=10)
     model.load_state_dict(state_dict)
-    
+
     amax = quantize_layer_params(state_dict)
     quant_model_params(state_dict, amax)
     
@@ -75,8 +65,9 @@ if __name__ == '__main__':
                 if isinstance(layer, nn.Linear):
                     hists[idx].fill_hist(x.cpu().numpy())
                     amax[f'net.{idx*2}.input'] = calib.compute_amax_entropy(hists[idx].hist, hists[idx].bin_edges, num_bits=8)
+                    x = torch.cat((x, torch.ones((len(x), 1))), dim=1)
                 else:
-                    idx += 1
+                    idx += 1       
                 x = layer(x)
 
     saved_stats['amax'] = amax

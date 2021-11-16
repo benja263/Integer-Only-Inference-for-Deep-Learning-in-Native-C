@@ -16,14 +16,19 @@ void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsig
     {
         for (n = 0; n < N; n++)
         {
+            row = n*K;
             sum_ = 0;
-            for (k = 0; k < K; k++)
+            for (k = 0; k < K + 1; k++)
             {
-                row = n*K + k;
-                col = k*M + m;
-                sum_ += mat_l[row] * mat_r[col];
+                col = k*M;
+                // add bias
+                if (k == K)
+                    sum_ += mat_r[col + m];
+                else
+                    sum_ += mat_l[row + k] * mat_r[col + m];
             }
-        result[n*M + m] = sum_;
+            
+            result[n*M + m] = sum_;
         }
     }
 }

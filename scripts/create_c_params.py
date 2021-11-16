@@ -18,15 +18,17 @@ if __name__ == '__main__':
 
     for idx in range(0, 2 + len(h_size) + 1, 2):
         amax[f'net.{idx}.wx_scale'] = (amax[f'net.{idx}.input'] * amax[f'net.{idx}.weight']) / (127**2)
-        amax[f'net.{idx}.bias_scale'] = amax[f'net.{idx}.bias'] / (127)
         amax[f'net.{idx}.input'] = 127 / amax[f'net.{idx}.input']
 
     
     # create header file
     with open('../src/nn_params.h', 'w') as f:
         f.write('#ifndef NN_PARAMS\n#define NN_PARAMS\n\n')
-        # f.write(f'#define INPUT_DIM {28*28}\n#define HIDDEN_DIM {len(h_size)}\n#define OUTPUT_DIM {10}\n')
-        f.write(f'#define INPUT_DIM {28*28}\n#define OUTPUT_DIM {10}\n')
+
+        f.write(f'#define INPUT_DIM {28*28}\n')
+        for idx, h_ in enumerate(h_size, start=1):
+            f.write(f'#define HIDDEN_{idx} {h_}\n')
+        f.write(f'#define OUTPUT_DIM {10}\n')
         f.write(f'#define FXP_VALUE {args.fxp_value}\n\n')
         f.write('#include <stdint.h>\n\n\n')
 
@@ -34,12 +36,6 @@ if __name__ == '__main__':
         f.write('// quantization/dequantization constants\n')
 
         for layer_idx in range(0, 2 + len(h_size) + 1, 2):
-            name = f'net.{layer_idx}.bias_scale'.replace('.', '_')
-            value = amax[f'net.{layer_idx}.bias_scale']
-            f.write(f"extern const float {name};\n")
-
-            fxp_name = 'fxp_' + name
-            f.write(f"extern const int {fxp_name};\n")
 
             name = f'net.{layer_idx}.wx_scale'.replace('.', '_')
             value = amax[f'net.{layer_idx}.wx_scale']
@@ -57,8 +53,7 @@ if __name__ == '__main__':
 
         f.write('// Layer quantized parameters\n')
         for name, param in state_dict.items():
-            param = param.flatten()
-            f.write(f"extern const int8_t {name.replace('.', '_')}[{len(param)}];\n")
+            f.write(f"extern const int8_t {name.replace('.', '_')}[{len(param.flatten())}];\n")
 
         f.write('\n#endif // end of NN_PARAMS\n')
 
@@ -72,14 +67,6 @@ if __name__ == '__main__':
             f.write(f"const float {name} = {value};\n")
 
             fxp_value = (value * (2**args.fxp_value)).round()
-            fxp_name = 'fxp_' + name
-            f.write(f"const int {fxp_name} = {int(fxp_value)};\n\n")
-
-            name = f'net.{layer_idx}.bias_scale'.replace('.', '_')
-            value = amax[f'net.{layer_idx}.bias_scale']
-            f.write(f"const float {name} = {value};\n")
-
-            fxp_value = (value * (2**args.fxp_prec_value)).round()
             fxp_name = 'fxp_' + name
             f.write(f"const int {fxp_name} = {int(fxp_value)};\n\n")
 
@@ -104,12 +91,10 @@ if __name__ == '__main__':
             f.write("};\n\n")
 
         for name, param in state_dict.items():
-            if 'weight' in name:
-                param = param.T
-            param = param.flatten()
-            f.write(f"const int8_t {name.replace('.', '_')}[{len(param)}] = {{")
-            for idx in range(len(param)):
-                 f.write(f"{param[idx]}")
-                 if idx < len(param) - 1:
-                     f.write(", ")
-            f.write("};\n")
+                param = param.T.flatten()
+                f.write(f"const int8_t {name.replace('.', '_')}[{len(param)}] = {{")
+                for idx in range(len(param)):
+                    f.write(f"{param[idx]}")
+                    if idx < len(param) - 1:
+                        f.write(", ")
+                f.write("};\n")

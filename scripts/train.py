@@ -59,7 +59,7 @@ def eval_epoch(model, data_loader, loss_fn):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for training a model",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--h_size', help='hidden layer dimensions', nargs='+', type=int, default=[64, 32])
+    parser.add_argument('--h_size', help='hidden layer dimensions', nargs='+', type=int, default=[128, 64])
     parser.add_argument('--num_epochs', help='number of training epochs', type=int, default=10)
     parser.add_argument('--batch_size', help='batch size', type=int, default=128)
 
@@ -89,16 +89,20 @@ if __name__ == '__main__':
         test_loss = eval_epoch(model, test_loader, loss_fnc)
         print(f"train loss: {train_loss:.5f} test loss: {test_loss:.5f}")
 
-    print('Eval Model on 50 Test Samples')
-    rand_numbers = np.random.randint(0, mnist_testset.data.shape[0], 50)
-    samples, labels = mnist_testset.data[rand_numbers], mnist_testset.targets[rand_numbers]
+    print('Eval Model on Test Samples')
+    test_loader = DataLoader(mnist_testset, batch_size=len(mnist_testset.data), num_workers=1, shuffle=False)
     with torch.no_grad():
-        logits = model(samples.float())
-        probs = torch.nn.functional.softmax(logits, dim=1)
-        preds = torch.argmax(probs, dim=1)
-        acc = (preds == labels).sum()
+        acc = 0
+        for samples, labels in test_loader:
+            logits = model(samples.float())
+            probs = torch.nn.functional.softmax(logits, dim=1)
+            preds = torch.argmax(probs, dim=1)
+            acc += (preds == labels).sum()
 
-    print(f"Accuracy: {(acc / 50.0)*100.0:.3f}%")
+    print(f"Accuracy: {(acc / len(mnist_testset.data))*100.0:.3f}%")
     torch.save({'state_dict': model.state_dict(),
-                'h_size': args.h_size},
+                'h_size': args.h_size,
+                'train_loss': train_loss,
+                'test_loss': test_loss,
+                'test_acc': acc},
                f'../saved_models/mlp_mnist.th')

@@ -26,6 +26,7 @@ if __name__ == '__main__':
     print(f'Eval Model on Test Samples')
     
     test_loader = DataLoader(mnist_testset, batch_size=args.batch_size, num_workers=1, shuffle=False)
+    # test_loader = DataLoader(mnist_testset, batch_size=1, num_workers=1, shuffle=False)
     
     fxp = True
 
@@ -33,6 +34,8 @@ if __name__ == '__main__':
 
     acc = 0
     for samples, labels in test_loader:
+        samples = samples.flatten(start_dim=1)
+        # samples = torch.cat((samples.flatten(start_dim=1), torch.ones((len(samples), 1))), dim=1)
         if fxp:
             samples = (samples * (2 ** 16)).round()
             # print(samples)
@@ -40,5 +43,7 @@ if __name__ == '__main__':
         else:
             preds = run_mlp(samples, c_lib).astype(int)
         acc += (torch.from_numpy(preds) == labels).sum()
+        # break
 
     print(f"Accuracy: {(acc / len(mnist_testset.data)) * 100.0:.3f}%")
+    # print(f"Accuracy: {(acc / 1) * 100.0:.3f}%")

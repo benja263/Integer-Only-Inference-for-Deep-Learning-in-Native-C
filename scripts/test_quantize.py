@@ -35,8 +35,6 @@ if __name__ == '__main__':
         acc = 0
         for samples, labels in test_loader:
             logits = model(samples, amax)
-            # print(logits)
-            # probs = torch.nn.functional.softmax(logits, dim=1)
             preds = torch.argmax(logits, dim=1)
             acc += (preds == labels).sum()
             break
