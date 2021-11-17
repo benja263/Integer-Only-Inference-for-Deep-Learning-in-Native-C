@@ -3,15 +3,15 @@ import torch
 
 
 class MLP(nn.Module):
-    def __init__(self, in_dim, out_dim, h_size, activation=nn.ReLU):
+    def __init__(self, in_dim, out_dim, hidden_sizes, activation=nn.ReLU):
         super(MLP, self).__init__()
-        assert isinstance(h_size, list) and len(h_size) > 0
-        layer_list = [nn.Linear(in_dim + 1, h_size[0], bias=False)]
-        for i in range(1, len(h_size)):
+        assert isinstance(hidden_sizes, list) and len(hidden_sizes) > 0
+        layer_list = [nn.Linear(in_dim + 1, hidden_sizes[0], bias=False)]
+        for i in range(1, len(hidden_sizes)):
             layer_list.extend([activation(),
-                               nn.Linear(h_size[i-1] +1, h_size[i], bias=False)]
+                               nn.Linear(hidden_sizes[i-1] +1, hidden_sizes[i], bias=False)]
                               )
-        layer_list.extend([activation(), nn.Linear(h_size[-1] + 1, out_dim, bias=False)])
+        layer_list.extend([activation(), nn.Linear(hidden_sizes[-1] + 1, out_dim, bias=False)])
         self.net = nn.ModuleList(layer_list)
 
     def forward(self, x):
@@ -25,15 +25,15 @@ class MLP(nn.Module):
 
 
 class QuantMLP(nn.Module):
-    def __init__(self, in_dim, out_dim, h_size, activation=nn.ReLU):
+    def __init__(self, in_dim, out_dim, hidden_sizes, activation=nn.ReLU):
         super(QuantMLP, self).__init__()
-        assert isinstance(h_size, list) and len(h_size) > 0
-        layer_list = [nn.Linear(in_dim + 1, h_size[0], bias=False)]
-        for i in range(1, len(h_size)):
+        assert isinstance(hidden_sizes, list) and len(hidden_sizes) > 0
+        layer_list = [nn.Linear(in_dim + 1, hidden_sizes[0], bias=False)]
+        for i in range(1, len(hidden_sizes)):
             layer_list.extend([activation(),
-                               nn.Linear(h_size[i-1] + 1, h_size[i], bias=False)]
+                               nn.Linear(hidden_sizes[i-1] + 1, hidden_sizes[i], bias=False)]
                               )
-        layer_list.extend([activation(), nn.Linear(h_size[-1] + 1, out_dim, bias=False)])
+        layer_list.extend([activation(), nn.Linear(hidden_sizes[-1] + 1, out_dim, bias=False)])
         self.net = nn.ModuleList(layer_list)
 
     def forward(self, x, amax):

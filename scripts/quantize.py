@@ -15,7 +15,7 @@ def quantize_layer_params(state_dict, percentile=99):
     for name, params in state_dict.items():
         print(f"Quantizing: {name}")
         params_amax, _ = params.max(dim=1)
-        amax[name] = params_amax
+        amax[name.replace('weight', 's_w')] = params_amax
     return amax
 
 def quant_model_params(state_dict, amax):
@@ -64,7 +64,7 @@ if __name__ == '__main__':
                 print(layer)
                 if isinstance(layer, nn.Linear):
                     hists[idx].fill_hist(x.cpu().numpy())
-                    amax[f'net.{idx*2}.input'] = calib.compute_amax_entropy(hists[idx].hist, hists[idx].bin_edges, num_bits=8)
+                    amax[f'net.{idx*2}.s_x'] = calib.compute_amax_entropy(hists[idx].hist, hists[idx].bin_edges, num_bits=8)
                     x = torch.cat((x, torch.ones((len(x), 1))), dim=1)
                 else:
                     idx += 1       

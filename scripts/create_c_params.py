@@ -7,7 +7,7 @@ if __name__ == '__main__':
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--filename', help='filename', type=str, default='mlp_mnist_quant.th')
     parser.add_argument('--fxp_value', help='fxp value', type=int, default=16)
-    parser.add_argument('--fxp_prec_value', help='fxp higher precision value', type=int, default=16)
+    parser.add_argument('--num_bits', help='number of bits', type=int, default=8)
 
     args = parser.parse_args()
 
@@ -17,8 +17,8 @@ if __name__ == '__main__':
     amax = saved_stats['amax']
 
     for idx in range(0, 2 + len(h_size) + 1, 2):
-        amax[f'net.{idx}.wx_scale'] = (amax[f'net.{idx}.input'] * amax[f'net.{idx}.weight']) / (127**2)
-        amax[f'net.{idx}.input'] = 127 / amax[f'net.{idx}.input']
+        amax[f'net.{idx}.s_wx_inv'] = (amax[f'net.{idx}.s_x'] * amax[f'net.{idx}.s_w']) / ((2**args.num_bits - 1)**2)
+        amax[f'net.{idx}.s_x'] = (2**args.num_bits - 1) / amax[f'net.{idx}.s_x']
 
     
     # create header file
@@ -37,19 +37,14 @@ if __name__ == '__main__':
 
         for layer_idx in range(0, 2 + len(h_size) + 1, 2):
 
-            name = f'net.{layer_idx}.wx_scale'.replace('.', '_')
-            value = amax[f'net.{layer_idx}.wx_scale']
+            name = f'net.{layer_idx}.s_wx_inv'.replace('.', '_')
+            value = amax[f'net.{layer_idx}.s_wx_inv']
             f.write(f"extern const float {name}[{len(value)}];\n")
 
-            fxp_name = 'fxp_' + name
-            f.write(f"extern const int {fxp_name}[{len(value)}];\n")
-
-            name = f'net.{layer_idx}.input'.replace('.', '_')
-            value = amax[f'net.{layer_idx}.input']
+            name = f'net.{layer_idx}.s_x'.replace('.', '_')
+            value = amax[f'net.{layer_idx}.s_x']
             f.write(f"extern const float {name};\n")
 
-            fxp_name = 'fxp_' + name
-            f.write(f"extern const int {fxp_name};\n")
 
         f.write('// Layer quantized parameters\n')
         for name, param in state_dict.items():
@@ -62,33 +57,20 @@ if __name__ == '__main__':
         f.write('#include "nn_params.h"\n\n\n')
 
         for layer_idx in range(0, 2 + len(h_size) + 1, 2):
-            name = f'net.{layer_idx}.input'.replace('.', '_')
-            value = amax[f'net.{layer_idx}.input']
-            f.write(f"const float {name} = {value};\n")
+            fxp_value = (amax[f'net.{layer_idx}.s_x'] * (2**args.fxp_value)).round()
+            name = f'net.{layer_idx}.s_x'.replace('.', '_')
+            f.write(f"const int {name} = {int(fxp_value)};\n\n")
 
-            fxp_value = (value * (2**args.fxp_value)).round()
-            fxp_name = 'fxp_' + name
-            f.write(f"const int {fxp_name} = {int(fxp_value)};\n\n")
-
-            name = f'net.{layer_idx}.wx_scale'.replace('.', '_')
-            value = amax[f'net.{layer_idx}.wx_scale']
-            f.write(f"const float {name}[{len(value)}] = {{")
-
-            for idx in range(len(value)):
-                f.write(f"{value[idx]}")
-                if idx < len(value) - 1:
-                     f.write(", ")
-            f.write("};\n\n")
-
-            fxp_value = (value * (2**args.fxp_prec_value)).round()
-            fxp_name = 'fxp_' + name
-            f.write(f"const int {fxp_name}[{len(fxp_value)}] = {{")
+            name = f'net.{layer_idx}.s_wx_inv'.replace('.', '_')
+            fxp_value = (amax[f'net.{layer_idx}.s_wx_inv'] * (2**args.fxp_value)).round()
+            f.write(f"const int {name}[{len(fxp_value)}] = {{")
 
             for idx in range(len(fxp_value)):
-                f.write(f"{int(fxp_value[idx])}")
+                f.write(f"{fxp_value[idx]}")
                 if idx < len(fxp_value) - 1:
                      f.write(", ")
             f.write("};\n\n")
+
 
         for name, param in state_dict.items():
                 param = param.T.flatten()

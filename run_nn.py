@@ -42,7 +42,6 @@ def run_mlp(x, c_lib):
     x = x.flatten()
     x = ensure_contiguous(x.numpy())
     x = x.astype(np.single)
-    # print(x)
     class_indices = ensure_contiguous(np.zeros(N, dtype=np.uintc))
 
     c_float_p = ctypes.POINTER(ctypes.c_float)
