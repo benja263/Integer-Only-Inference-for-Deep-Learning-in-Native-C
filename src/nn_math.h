@@ -3,8 +3,8 @@
 *
 * Description of the function/typedef purpose
 *******************************************************************/
-#ifndef ML_MATH_H
-#define ML_MATH_H
+#ifndef NN_MATH_H
+#define NN_MATH_H
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -13,7 +13,7 @@
 #define _INT8_MAX 127
 #define _INT8_MIN -127
 
-#define ROUND_CONST (1 << (FXP_VALUE - 1))
+#define ROUND_CONST (1 << (FXP_VALUE - 1)) // = 0.5 to before right shifting to improve rounding
 
 #include "nn_params.h"
 
@@ -30,3 +30,4 @@ void dequantize_per_row(int *mat_q, const int *amax, const unsigned int N, const
 void argmax_over_cols(const int *mat, unsigned int *indices, const unsigned int N, const unsigned int M);
 
 #endif //
+

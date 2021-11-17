@@ -1,23 +1,27 @@
 import argparse
+from typing import Float
 
+import numpy as np
 import torch
+import torch.nn as nn
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-from torch.utils.data import DataLoader, random_split
-from torch.optim import Adam
-import numpy as np
-
 from neural_nets import MLP
+from torch.optim import Adam
+from torch.utils.data import DataLoader, random_split
 
 
-def train_epoch(model, data_loader, optimizer, loss_fn):
+def train_epoch(model:nn.Module, data_loader:DataLoader, optimizer:Adam, loss_fn:nn.CrossEntropyLoss):
     """
     Train model for 1 epoch and return dictionary with the average training metric values
-    :param nn.Module model:
-    :param DataLoader data_loader:
-    :param optimizer:
-    :param loss_fn: loss function
-    :return:
+    Args:
+        model (nn.Module)
+        data_loader (DataLoader)
+        optimizer (Adam)
+        loss_fn (nn.CrossEntropyLoss)
+
+    Returns:
+        [Float]: average training loss on epoch
     """
     model.train(mode=True)
     num_batches = len(data_loader)
@@ -25,24 +29,28 @@ def train_epoch(model, data_loader, optimizer, loss_fn):
     loss = 0
     for x, y in data_loader:
         optimizer.zero_grad()
+
         logits = model(x)
 
         batch_loss = loss_fn(logits, y)
 
         batch_loss.backward()
-
         optimizer.step()
+
         loss += batch_loss.item()
     return loss / num_batches
 
 
-def eval_epoch(model, data_loader, loss_fn):
+def eval_epoch(model: nn.Module, data_loader:DataLoader, loss_fn:nn.CrossEntropyLoss):
     """
-    Train model for 1 epoch and return dictionary with the average training metric values
-    :param nn.Module model:
-    :param DataLoader data_loader:
-    :param loss_fn: loss function
-    :return:
+    Evaluate epoch on validation data
+    Args:
+        model (nn.Module)
+        data_loader (DataLoader)
+        loss_fn (nn.CrossEntropyLoss)
+
+    Returns:
+        [Float]: average validation loss 
     """
     model.eval()
     num_batches = len(data_loader)
@@ -71,6 +79,7 @@ if __name__ == '__main__':
         transforms.Normalize(
             (0.1307,), (0.3081,))]))
 
+    # split training data to train/validation
     split_r = args.train_val_split
     mnist_trainset, mnist_valset = random_split(mnist_trainset, [round(len(mnist_trainset)*split_r), round(len(mnist_trainset)*(1 - split_r))])
 
@@ -83,7 +92,7 @@ if __name__ == '__main__':
 
     optimizer = Adam(model.parameters())
 
-    loss_fnc = torch.nn.CrossEntropyLoss()
+    loss_fnc = nn.CrossEntropyLoss()
 
     train_loader = DataLoader(mnist_trainset, batch_size=args.batch_size, num_workers=1, shuffle=True)
     val_loader = DataLoader(mnist_valset, batch_size=args.batch_size, num_workers=1, shuffle=True)

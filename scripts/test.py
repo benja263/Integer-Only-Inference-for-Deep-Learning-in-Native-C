@@ -1,20 +1,19 @@
+"""
+Script for running inference of model in C using ctypes
+"""
 import argparse
 
+import numpy as np
 import torch
-
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
+from src.run_nn import load_c_lib, run_mlp
 from torch.utils.data import DataLoader
-import numpy as np
-
-from run_nn import *
-
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Script for testing post-training quantization of a pre-trained model",
+    parser = argparse.ArgumentParser(description="Script for testing post-training quantization of a pre-trained model in C",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--fxp', help='to run with fixed-point instead of float', action='store_true')
-    parser.add_argument('--batch_size', help='batch size', type=int, default=2500)
+    parser.add_argument('--batch_size', help='batch size', type=int, default=250)
 
     args = parser.parse_args()
 
@@ -23,27 +22,17 @@ if __name__ == '__main__':
         transforms.Normalize((0.1307,), (0.3081,))
         ]))
 
-    print(f'Eval Model on Test Samples')
+    print(f'Evaluate model on test data')
     
     test_loader = DataLoader(mnist_testset, batch_size=args.batch_size, num_workers=1, shuffle=False)
-    # test_loader = DataLoader(mnist_testset, batch_size=1, num_workers=1, shuffle=False)
-    
-    fxp = True
-
+    # load c library
     c_lib = load_c_lib()
 
     acc = 0
     for samples, labels in test_loader:
         samples = samples.flatten(start_dim=1)
-        # samples = torch.cat((samples.flatten(start_dim=1), torch.ones((len(samples), 1))), dim=1)
-        if fxp:
-            samples = (samples * (2 ** 16)).round()
-            # print(samples)
-            preds = run_fxp_mlp(samples, c_lib).astype(int)
-        else:
-            preds = run_mlp(samples, c_lib).astype(int)
+        samples = (samples * (2 ** 16)).round()
+        preds = run_mlp(samples, c_lib).astype(int)
         acc += (torch.from_numpy(preds) == labels).sum()
-        # break
 
     print(f"Accuracy: {(acc / len(mnist_testset.data)) * 100.0:.3f}%")
-    # print(f"Accuracy: {(acc / 1) * 100.0:.3f}%")

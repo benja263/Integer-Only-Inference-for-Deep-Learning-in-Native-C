@@ -5,9 +5,21 @@
 
 void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsigned int N, const unsigned int K, const unsigned int M)
 {       
+    /**
+     * @brief Calculate matrix multiplication as: Y = XW
+     *  
+     * 
+     * @param mat_l - left matrix (X), size NxK
+     * @param mat_r - right matrix (W), size (K+1)xM, the last row of W contains the Bias
+     * @param result - output matrix (Y), size NxM
+     * @param N - number of rows in X
+     * @param K - number of columns/rows in X/W
+     * @param M - number of columns in W
+     */
     unsigned int n, k, m;
     unsigned int row, col;
     int sum_;
+
     for (m = 0; m < M; m++)
     {
         for (n = 0; n < N; n++)
@@ -17,13 +29,11 @@ void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsig
             for (k = 0; k < K + 1; k++)
             {
                 col = k*M;
-                // add bias
-                if (k == K)
+                if (k == K) /* add bias */
                     sum_ += mat_r[col + m];
                 else
                     sum_ += mat_l[row + k] * mat_r[col + m];
             }
-            
             result[n*M + m] = sum_;
         }
     }
@@ -31,11 +41,17 @@ void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsig
 
 void _broadcast_mat_vec_mult(int *mat, const int *vec, const unsigned int N, const unsigned int M)
 {
-    /*
-    in place element-wise multplication of an 1xM row vector and an matrix NxM matrix , such that 
+    /**
+     * @brief in place element-wise multplication of an 1xM row vector and an matrix NxM matrix , such that 
     every element of column m in the matrix is multiplied by element of the m-th column in the vector
-    */ 
+     * 
+     * @param mat - NxM matrix
+     * @param vec - 1xM row vector
+     * @param N
+     * @param M
+     */
     unsigned int k, n;
+
     for (n = 0; n < N; n++)
     {
         for (k = 0; k < M; k++)
@@ -45,6 +61,12 @@ void _broadcast_mat_vec_mult(int *mat, const int *vec, const unsigned int N, con
 
 void relu(int *mat, const unsigned int size)
 {
+    /**
+     * @brief ReLU activation function
+     * 
+     * @param mat - MxN matrix
+     * @param size - MxN
+     */
     unsigned int i;
     for (i = 0; i < size; i++)
         mat[i] = MAX(mat[i], 0);

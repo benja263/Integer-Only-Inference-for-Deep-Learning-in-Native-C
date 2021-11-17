@@ -1,5 +1,6 @@
-import numpy as np
 from collections import Counter
+
+import numpy as np
 from scipy.stats import entropy
 
 
@@ -25,7 +26,6 @@ class Histogram:
             if temp_amax > self.bin_edges[-1]:
                 # increase the number of bins
                 width = self.bin_edges[1] - self.bin_edges[0]
-                # NOTE: np.arange may create an extra bin after the one containing temp_amax
                 new_bin_edges = np.arange(self.bin_edges[-1] + width, temp_amax + width, width)
                 self.bin_edges = np.hstack((self.bin_edges, new_bin_edges))
             hist, self.bin_edges = np.histogram(x, bins=self.bin_edges)
@@ -109,24 +109,6 @@ def compute_amax_entropy(hist, bin_edges, num_bits, stride=1):
     calib_amax = bin_edges[last_argmin * stride + starting]
     return calib_amax
 
-
-def _compute_amax_percentile(calib_hist, calib_bin_edges, percentile):
-    """Returns amax that clips the percentile fraction of collected data"""
-
-    if percentile < 0 or percentile > 100:
-        raise ValueError("Invalid percentile. Must be in range 0 <= percentile <= 100.")
-
-    # If calibrator hasn't collected any data, return none
-    if calib_bin_edges is None and calib_hist is None:
-        return None
-
-    total = calib_hist.sum()
-    cdf = np.cumsum(calib_hist / total)
-    idx = np.searchsorted(cdf, percentile / 100)
-    calib_amax = calib_bin_edges[idx]
-    calib_amax = torch.tensor(calib_amax.item()) #pylint: disable=not-callable
-
-    return calib_amax
 
 
 

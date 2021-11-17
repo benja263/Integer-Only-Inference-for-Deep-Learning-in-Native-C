@@ -1,6 +1,10 @@
+"""
+Script for writing param header and source files in C with weights and amax values calculate in python
+"""
 import argparse
-import torch
 import subprocess
+
+import torch
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for post-training quantization of a pre-trained model",
@@ -13,10 +17,11 @@ if __name__ == '__main__':
 
     saved_stats = torch.load('../saved_models/' + args.filename)
     state_dict = saved_stats['state_dict']
-    h_size = saved_stats['h_size']
+    hidden_sizes = saved_stats['hidden_sizes']
     amax = saved_stats['amax']
 
-    for idx in range(0, 2 + len(h_size) + 1, 2):
+    for idx in range(0, 2 + len(hidden_sizes) + 1, 2):
+        # invert s_wx such that we can replace fixed-point division with multiplication
         amax[f'net.{idx}.s_wx_inv'] = (amax[f'net.{idx}.s_x'] * amax[f'net.{idx}.s_w']) / ((2**args.num_bits - 1)**2)
         amax[f'net.{idx}.s_x'] = (2**args.num_bits - 1) / amax[f'net.{idx}.s_x']
 
@@ -26,8 +31,8 @@ if __name__ == '__main__':
         f.write('#ifndef NN_PARAMS\n#define NN_PARAMS\n\n')
 
         f.write(f'#define INPUT_DIM {28*28}\n')
-        for idx, h_ in enumerate(h_size, start=1):
-            f.write(f'#define HIDDEN_{idx} {h_}\n')
+        for idx, hidden_size in enumerate(hidden_sizes, start=1):
+            f.write(f'#define HIDDEN_{idx} {hidden_size}\n')
         f.write(f'#define OUTPUT_DIM {10}\n')
         f.write(f'#define FXP_VALUE {args.fxp_value}\n\n')
         f.write('#include <stdint.h>\n\n\n')
@@ -35,15 +40,15 @@ if __name__ == '__main__':
 
         f.write('// quantization/dequantization constants\n')
 
-        for layer_idx in range(0, 2 + len(h_size) + 1, 2):
+        for layer_idx in range(0, 2 + len(hidden_sizes) + 1, 2):
 
             name = f'net.{layer_idx}.s_wx_inv'.replace('.', '_')
             value = amax[f'net.{layer_idx}.s_wx_inv']
-            f.write(f"extern const float {name}[{len(value)}];\n")
+            f.write(f"extern const int {name}[{len(value)}];\n")
 
             name = f'net.{layer_idx}.s_x'.replace('.', '_')
             value = amax[f'net.{layer_idx}.s_x']
-            f.write(f"extern const float {name};\n")
+            f.write(f"extern const int {name};\n")
 
 
         f.write('// Layer quantized parameters\n')
@@ -56,7 +61,7 @@ if __name__ == '__main__':
     with open('../src/nn_params.c', 'w') as f:
         f.write('#include "nn_params.h"\n\n\n')
 
-        for layer_idx in range(0, 2 + len(h_size) + 1, 2):
+        for layer_idx in range(0, 2 + len(hidden_sizes) + 1, 2):
             fxp_value = (amax[f'net.{layer_idx}.s_x'] * (2**args.fxp_value)).round()
             name = f'net.{layer_idx}.s_x'.replace('.', '_')
             f.write(f"const int {name} = {int(fxp_value)};\n\n")
