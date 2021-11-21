@@ -3,7 +3,7 @@
 #include "nn_math.h"
 
 void linear_layer(const int *x, const int8_t *w,int *output, const int x_amax_quant, const int *x_w_amax_dequant,
-                  const unsigned int N, const unsigned int K, const unsigned int M, const unsigned int not_final)
+                  const unsigned int N, const unsigned int K, const unsigned int M, const unsigned int not_output)
 {
     int8_t x_q[N * K];
     quantize(x, x_q, x_amax_quant, N*K);
@@ -12,12 +12,12 @@ void linear_layer(const int *x, const int8_t *w,int *output, const int x_amax_qu
 
     dequantize_per_row(output, x_w_amax_dequant, N, M);
 
-    if (not_final)
+    if (not_output)
         relu(output, N*M);
 }
 
 
-void run_mlp(int *x, const unsigned int N, unsigned int *image_class)
+void run_mlp(int *x, const unsigned int N, unsigned int *class_indices)
 {
     int out_input[N*HIDDEN_1];
     linear_layer(x, net_0_weight, out_input, net_0_s_x,
@@ -32,5 +32,5 @@ void run_mlp(int *x, const unsigned int N, unsigned int *image_class)
                   net_4_s_wx_inv,
                   N, HIDDEN_2, OUTPUT_DIM, 0);
     // get argmax
-    argmax_over_cols(output, image_class, N, OUTPUT_DIM);
+    argmax_over_cols(output, class_indices, N, OUTPUT_DIM);
 }

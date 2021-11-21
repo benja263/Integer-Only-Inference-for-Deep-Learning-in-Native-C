@@ -1,3 +1,11 @@
+/*******************************************************************
+@file nn_params.h
+*  @brief variable prototypes for model parameters and amax values
+*
+*
+*  @author Benjamin Fuhrer
+*
+*******************************************************************/
 #ifndef NN_PARAMS
 #define NN_PARAMS
 

@@ -5,17 +5,6 @@
 
 void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsigned int N, const unsigned int K, const unsigned int M)
 {       
-    /**
-     * @brief Calculate matrix multiplication as: Y = XW
-     *  
-     * 
-     * @param mat_l - left matrix (X), size NxK
-     * @param mat_r - right matrix (W), size (K+1)xM, the last row of W contains the Bias
-     * @param result - output matrix (Y), size NxM
-     * @param N - number of rows in X
-     * @param K - number of columns/rows in X/W
-     * @param M - number of columns in W
-     */
     unsigned int n, k, m;
     unsigned int row, col;
     int sum_;
@@ -41,15 +30,6 @@ void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsig
 
 void _broadcast_mat_vec_mult(int *mat, const int *vec, const unsigned int N, const unsigned int M)
 {
-    /**
-     * @brief in place element-wise multplication of an 1xM row vector and an matrix NxM matrix , such that 
-    every element of column m in the matrix is multiplied by element of the m-th column in the vector
-     * 
-     * @param mat - NxM matrix
-     * @param vec - 1xM row vector
-     * @param N
-     * @param M
-     */
     unsigned int k, n;
 
     for (n = 0; n < N; n++)
@@ -61,54 +41,43 @@ void _broadcast_mat_vec_mult(int *mat, const int *vec, const unsigned int N, con
 
 void relu(int *mat, const unsigned int size)
 {
-    /**
-     * @brief ReLU activation function
-     * 
-     * @param mat - MxN matrix
-     * @param size - MxN
-     */
     unsigned int i;
     for (i = 0; i < size; i++)
         mat[i] = MAX(mat[i], 0);
 }
 
 
-void quantize(const int *mat, int8_t *mat_q, const int amax, const unsigned int size)
+void quantize(const int *mat_in, int8_t *mat_q, const int amax, const unsigned int size)
 {
     unsigned int i;
     for (i = 0; i < size; i++)
     {
-        int value;
-        // avoiding overflow by separating between integer parts and fractions parts
-        // extract integer part and fraction part (in fixed-point)
+        int rounded_value;
+        // separation to integer and fraction parts
         int amax_int = amax >> FXP_VALUE;
         int amax_frac = amax - (amax_int << FXP_VALUE);
 
-        int mat_int = mat[i] >> FXP_VALUE;
-        int mat_frac = mat[i] - (mat_int << FXP_VALUE);
+        int mat_int = mat_in[i] >> FXP_VALUE;
+        int mat_frac = mat_in[i] - (mat_int << FXP_VALUE);
 
-        // int * fxp = normal multiplicaation with result is in fxp
-        value = mat_int*amax_frac + amax_int*mat_frac;
-        // fxp * fxp = fix-point multiplication with result is in fxp
-        value += (mat_frac*amax_frac + ROUND_CONST) >> FXP_VALUE;
-        // convert fxp to int and add to integer parts as final value should be a rounded int
-        value = ((value + ROUND_CONST) >> FXP_VALUE) + mat_int*amax_int;
+        rounded_value = mat_int*amax_frac + amax_int*mat_frac; /* int * fxp = normal multiplicaation with result is in fxp */
+        rounded_value += (mat_frac*amax_frac + ROUND_CONST) >> FXP_VALUE; /* fxp * fxp = fix-point multiplication with result is in fxp */
 
-        mat_q[i] = (int8_t)MIN(MAX(value, _INT8_MIN), _INT8_MAX);
+        rounded_value = ((rounded_value + ROUND_CONST) >> FXP_VALUE) + mat_int*amax_int; /* convert fxp to int and add to integer parts as final value should be a rounded integer */
+
+        mat_q[i] = (int8_t)MIN(MAX(rounded_value, _INT8_MIN), _INT8_MAX); /* store quantized value in output matrix */
     }
 }
 
 
-void dequantize_per_row(int *mat_q, const int *amax, const unsigned int N, const unsigned int M)
+void dequantize_per_row(int *mat_in, const int *amax, const unsigned int N, const unsigned int M)
 {
-    /* per row dequantization such that each row is multiplied by the corresponding column value in amax
-    * offline calculate reciprocal(amax) so we can replace division by multiplication
-    */
-    _broadcast_mat_vec_mult(mat_q, amax, N, M);
+    _broadcast_mat_vec_mult(mat_in, amax, N, M);
 }
 
-void argmax_over_cols(const int *mat, unsigned int *indices, const unsigned int N, const unsigned int M)
+void argmax_over_cols(const int *mat_in, unsigned int *indices, const unsigned int N, const unsigned int M)
 {
+
     // calculate max of each row
     unsigned int n, m, max_idx;
     int row_max, value;
@@ -118,7 +87,7 @@ void argmax_over_cols(const int *mat, unsigned int *indices, const unsigned int 
         max_idx = 0;
         for (m = 0; m < M; m++)
         {
-            value = mat[n*M + m];
+            value = mat_in[n*M + m];
             if (value > row_max)
             {
                 row_max = value;

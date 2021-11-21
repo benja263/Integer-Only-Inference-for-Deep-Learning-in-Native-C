@@ -1,3 +1,6 @@
+"""
+Script for training a simple MLP for classification on the MNIST dataset
+"""
 import argparse
 from typing import Float
 

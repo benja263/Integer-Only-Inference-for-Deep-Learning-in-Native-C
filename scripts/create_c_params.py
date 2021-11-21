@@ -28,6 +28,10 @@ if __name__ == '__main__':
     
     # create header file
     with open('../src/nn_params.h', 'w') as f:
+        f.write('/*******************************************************************\n')
+        f.write('@file nn_params.h\n*  @brief variable prototypes for model parameters and amax values\n*\n*\n')
+        f.write('*  @author Benjamin Fuhrer\n*\n')
+        f.write('*******************************************************************/\n')
         f.write('#ifndef NN_PARAMS\n#define NN_PARAMS\n\n')
 
         f.write(f'#define INPUT_DIM {28*28}\n')
