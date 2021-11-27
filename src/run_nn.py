@@ -17,6 +17,7 @@ def load_c_lib():
     """
     try:
         c_lib = ctypes.CDLL(f"{os.path.dirname(os.path.abspath(__file__))}/nn.so")
+        print(c_lib)
     except OSError:
         print("Unable to load the requested C library")
         sys.exit()

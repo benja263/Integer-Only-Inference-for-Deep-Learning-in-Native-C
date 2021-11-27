@@ -17,7 +17,7 @@ class MLP(nn.Module):
     def forward(self, x):
         x = x.flatten(start_dim=1)
         for i in range(len(self.net)):
-            if isinstance(self.net[i], nn.Linear):
+            if not isinstance(self.net[i], nn.ReLU):
                 # add bias column in input
                 x = torch.cat((x, torch.ones((len(x), 1))), dim=1)
             x = self.net[i](x)

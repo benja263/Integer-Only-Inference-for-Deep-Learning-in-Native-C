@@ -2,7 +2,7 @@
 Script for training a simple MLP for classification on the MNIST dataset
 """
 import argparse
-from typing import Float
+# from typing import Float
 
 import numpy as np
 import torch

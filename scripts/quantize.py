@@ -42,7 +42,7 @@ def quantize_model_params(state_dict:Dict, amax:Dict):
         # follow paper's naming
         param_amax = amax[name.replace('weight', 's_w')]
         # quantize  and re-transpose such that weights are compatible with pytorch's weight shape
-        param = (param.T * (127 / param_amax).T
+        param = (param.T * (127 / param_amax)).T
         state_dict[name] = torch.clamp(param.round(), min=-127, max=127).to(int)
 
 if __name__ == '__main__':
