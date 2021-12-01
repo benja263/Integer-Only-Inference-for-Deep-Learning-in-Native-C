@@ -40,4 +40,5 @@ void run_mlp(int *x, const unsigned int N, unsigned int *class_indices);
  * @param class_indices - Nx1 vector for storing class index prediction
  */
 
+void run_convnet(int *x, const unsigned int N, unsigned int *class_indices);
 #endif 

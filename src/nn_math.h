@@ -15,6 +15,7 @@
 #define MIN_INT -2147483648
 #define _INT8_MAX 127
 #define _INT8_MIN -127
+#define MIN_FLOAT -99999999
 
 #define ROUND_CONST (1 << (FXP_VALUE - 1)) // = 0.5 to before right shifting to improve rounding
 
@@ -34,6 +35,16 @@ void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsig
  * @return Void
  */
 
+int get_output_dim(int input_dim, int padding, int kernel_size, int stride, int dilation);
+
+void conv2d(int8_t *x, int8_t *w, int *y, int N, int C_in, int C_out, int H, int W, int H_new, int W_new,
+            int k_size_h, int k_size_w,  int stride_h, int stride_w, int padding_h,
+            int padding_w, int dilation_h, int dilation_w);
+
+void pooling2d(int *x, int *y, int N, int C_out, int H, int W, int H_new, int W_new,
+            int k_size_h, int k_size_w,  int stride_h, int stride_w, int padding_h,
+            int padding_w, int dilation_h, int dilation_w); 
+
 void _broadcast_mat_vec_mult(int *mat, const int *vec, const unsigned int N, const unsigned int M);
 /**
 * @brief in place element-wise multplication of an 1xM row vector and an matrix NxM matrix , such that 
@@ -46,12 +57,12 @@ void _broadcast_mat_vec_mult(int *mat, const int *vec, const unsigned int N, con
 * @return Void
 */
 
-void relu(int *mat, const unsigned int size);
+void relu(int *tensor_in, const unsigned int size);
 /**
  * @brief ReLU activation function
  * 
- * @param mat - NxM matrix
- * @param size - NxM
+ * @param tensor_in - input tensor
+ * @param size - product of all dimensions of tensor
  * @return Void
  */
 
@@ -78,6 +89,8 @@ void dequantize_per_row(int *mat_in, const int *amax, const unsigned int N, cons
  * @param M
  * @return Void
 */
+
+void dequantize_per_channel(int *tensor_in, const int *amax, const unsigned int N, const unsigned int C, const unsigned int K);
 
 void argmax_over_cols(const int *mat_in, unsigned int *indices, const unsigned int N, const unsigned int M);
 /**
