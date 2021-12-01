@@ -26,8 +26,8 @@ extern const int net_2_s_x;
 extern const int net_4_s_wx_inv[10];
 extern const int net_4_s_x;
 // Layer quantized parameters
-extern const int8_t net_0_weight[100480];
-extern const int8_t net_2_weight[8256];
-extern const int8_t net_4_weight[650];
+extern const int8_t net_0_weight[100352];
+extern const int8_t net_2_weight[8192];
+extern const int8_t net_4_weight[640];
 
 #endif // end of NN_PARAMS

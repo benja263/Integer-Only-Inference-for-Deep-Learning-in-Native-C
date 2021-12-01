@@ -15,12 +15,12 @@ void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsig
         {
             row = n*K;
             sum_ = 0;
-            for (k = 0; k < K + 1; k++)
+            for (k = 0; k < K; k++)
             {
                 col = k*M;
-                if (k == K) /* add bias */
-                    sum_ += mat_r[col + m];
-                else
+                // if (k == K) /* add bias */
+                //     sum_ += mat_r[col + m];
+                // else
                     sum_ += mat_l[row + k] * mat_r[col + m];
             }
             result[n*M + m] = sum_;

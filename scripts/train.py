@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-from neural_nets import MLP
+from neural_nets import MLP, ConvNet
 from torch.optim import Adam
 from torch.utils.data import DataLoader, random_split
 
@@ -32,7 +32,6 @@ def train_epoch(model:nn.Module, data_loader:DataLoader, optimizer:Adam, loss_fn
     loss = 0
     for x, y in data_loader:
         optimizer.zero_grad()
-
         logits = model(x)
 
         batch_loss = loss_fn(logits, y)
@@ -74,6 +73,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_epochs', help='number of training epochs', type=int, default=10)
     parser.add_argument('--batch_size', help='batch size', type=int, default=128)
     parser.add_argument('--train_val_split', help='Train validation split ratio', type=float, default=0.8)
+    parser.add_argument('--network_type', help='which network type to use', type=str, choices=['mlp', 'convnet'], default='convnet')
 
     args = parser.parse_args()
 
@@ -91,7 +91,7 @@ if __name__ == '__main__':
         transforms.Normalize(
             (0.1307,), (0.3081,))]))
 
-    model = MLP(in_dim=28*28, out_dim=10, hidden_sizes=args.hidden_sizes)
+    model = MLP(in_dim=28*28, out_dim=10, hidden_sizes=args.hidden_sizes) if args.network_type == 'mlp' else ConvNet(out_dim=10)
 
     optimizer = Adam(model.parameters())
 
@@ -102,12 +102,12 @@ if __name__ == '__main__':
     test_loader = DataLoader(mnist_testset, batch_size=args.batch_size, num_workers=1, shuffle=True)
 
     for epoch in range(args.num_epochs):
-        print(f"Epoch: {epoch}")
         train_loss = train_epoch(model, train_loader, optimizer, loss_fnc)
         val_loss = eval_epoch(model, val_loader, loss_fnc)
-        print(f"train loss: {train_loss:.5f} validation loss: {val_loss:.5f}")
+        print(f"Epoch: {epoch  + 1} - train loss: {train_loss:.5f} validation loss: {val_loss:.5f}")
 
     print('Evaluate model on test data')
+    model.eval()
     with torch.no_grad():
         acc = 0
         for samples, labels in test_loader:
@@ -122,4 +122,4 @@ if __name__ == '__main__':
                 'train_loss': train_loss,
                 'val_loss': val_loss,
                 'test_acc': acc},
-               f'../saved_models/mlp_mnist.th')
+               f'../saved_models/{args.network_type}_mnist.th')
