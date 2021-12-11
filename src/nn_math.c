@@ -2,7 +2,10 @@
 #include "nn_math.h"
 #include "nn_params.h"
 
+#include <stdio.h>
 
+#include <math.h>
+#include <stdlib.h>
 void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsigned int N, const unsigned int K, const unsigned int M)
 {       
     unsigned int n, k, m;
@@ -18,10 +21,7 @@ void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsig
             for (k = 0; k < K; k++)
             {
                 col = k*M;
-                // if (k == K) /* add bias */
-                //     sum_ += mat_r[col + m];
-                // else
-                    sum_ += mat_l[row + k] * mat_r[col + m];
+                sum_ += mat_l[row + k] * mat_r[col + m];
             }
             result[n*M + m] = sum_;
         }
@@ -35,7 +35,7 @@ int get_output_dim(int input_dim, int padding, int kernel_size, int stride, int 
 }
 
 
-void conv2d(int8_t *x, int8_t *w, int *y, int N, int C_in, int C_out, int H, int W, int H_new, int W_new,
+void conv2d(const int8_t *x, const int8_t *w, int *y, int N, int C_in, int C_out, int H, int W, int H_new, int W_new,
             int k_size_h, int k_size_w,  int stride_h, int stride_w, int padding_h,
             int padding_w, int dilation_h, int dilation_w)
 {
@@ -110,7 +110,7 @@ void pooling2d(int *x, int *y, int N, int C_out, int H, int W, int H_new, int W_
                     int output_idx_y = i*W_new + j;
                     int output_idx_x = i*stride_h*W + j*stride_w;
                     
-                    int max = MIN_FLOAT;
+                    int max = MIN_INT;
                     for (n = 0; n < k_size_w; n++)
                     {
                         for (m = 0; m < k_size_h; m++)
@@ -143,48 +143,83 @@ void relu(int *tensor, const unsigned int size)
 void quantize(const int *tensor_in, int8_t *tensor_q, const int amax, const unsigned int size)
 {
     unsigned int i;
+
+    int rounded_value, tensor_int, tensor_frac;
+    // separation to integer and fraction parts
+    // int amax_int = amax >> FXP_VALUE;
+    // int amax_frac = amax - (amax_int << FXP_VALUE);
     for (i = 0; i < size; i++)
     {
-        int rounded_value;
-        // separation to integer and fraction parts
-        int amax_int = amax >> FXP_VALUE;
-        int amax_frac = amax - (amax_int << FXP_VALUE);
 
-        int tensor_int = tensor_in[i] >> FXP_VALUE;
-        int tensor_frac = tensor_in[i] - (tensor_int << FXP_VALUE);
+        tensor_int = tensor_in[i] >> FXP_VALUE;
+        tensor_frac = tensor_in[i] - (tensor_int << FXP_VALUE);
 
-        rounded_value = tensor_int*amax_frac + amax_int*tensor_frac; /* int * fxp = normal multiplication with result is in fxp */
-        rounded_value += (tensor_frac*amax_frac + ROUND_CONST) >> FXP_VALUE; /* fxp * fxp = fix-point multiplication with result is in fxp */
+        // rounded_value = tensor_int*amax_frac + amax_int*tensor_frac; /* int * fxp = normal multiplication with result is in fxp */
+        // rounded_value += (tensor_frac*amax_frac + ROUND_CONST) >> FXP_VALUE; /* fxp * fxp = fix-point multiplication with result is in fxp */
 
-        rounded_value = ((rounded_value + ROUND_CONST) >> FXP_VALUE) + tensor_int*amax_int; /* convert fxp to int and add to integer parts as final value should be a rounded integer */
 
+        // rounded_value = ((rounded_value + ROUND_CONST) >> FXP_VALUE) + tensor_int*amax_int; /* convert fxp to int and add to integer parts as final value should be a rounded integer */
+        rounded_value = (((tensor_frac*amax + ROUND_CONST) >> FXP_VALUE) + tensor_int*amax)*_INT8_MAX;
+        // if (rounded_value > (1 << FXP_VALUE))
+        //     rounded_value = ((rounded_value + ROUND_CONST) >> FXP_VALUE) * _INT8_MAX;
+        // else
+        //     rounded_value = (rounded_value*_INT8_MAX + ROUND_CONST) >> FXP_VALUE;
+        // // rounded_value = (amax_frac*tensor_in[i] + ROUND_CONST) >> FXP_VALUE;
+        rounded_value =  ((rounded_value + ROUND_CONST) >> FXP_VALUE);
+        // printf("%f %f %d ", tensor_in[i]/powf(2, 16), tensor_in[i]/powf(2, 16)*amax/powf(2, 16)* _INT8_MAX, rounded_value);
         tensor_q[i] = (int8_t)MIN(MAX(rounded_value, _INT8_MIN), _INT8_MAX); /* store quantized value in output matrix */
+        // printf("%d ", tensor_q[i]);
     }
+//     printf("\n");
+//     exit(1);
 }
 
 
-void dequantize_per_row(int *mat_in, const int *amax, const unsigned int N, const unsigned int M)
+void dequantize_per_row(int *mat_in, const int *amax_w, const int amax_x, const unsigned int  N, const unsigned int  M)
 {
-    unsigned int k, n;
+    unsigned int  k, n;
+
+    int out_value;
+
 
     for (n = 0; n < N; n++)
     {
         for (k = 0; k < M; k++)
-            mat_in[n*M + k] *= amax[k];
+        {
+            
+            out_value = amax_w[k] *amax_x;
+            if (out_value > (1 << FXP_VALUE))
+                mat_in[n*M + k]  *= ((out_value + ROUND_CONST) >> FXP_VALUE);
+            else
+                mat_in[n*M + k] = (out_value*mat_in[n*M + k] + ROUND_CONST) >> FXP_VALUE;
+
+            // mat_in[n*M + k] = mat_in[n*M + k] / _INT8_MAX; /* divide by 127**2*/
+        }
     }
 }
 
 
-void dequantize_per_channel(int *tensor_in, const int *amax, const unsigned int N, const unsigned int C, const unsigned int K)
+void dequantize_per_channel(int *tensor_in, const int *amax_w, const int amax_x, const unsigned int N, const unsigned int C, const unsigned int K)
 {
     unsigned int k, n, c;
+
+    int out_value;
 
     for (n = 0; n < N; n++)
     {
         for (c = 0; c < C; c++)
         {
             for (k =0; k < K; k++)
-                tensor_in[n*C + c*K + k] *= amax[c];
+            {
+                // tensor_in[n*C + c*K + k] = (tensor_in[n*C + c*K + k]*amax_w[c]*amax_x + ROUND_CONST) >> FXP_VALUE;
+                out_value = amax_w[c] *amax_x;
+                if (out_value > (1 << FXP_VALUE))
+                    tensor_in[n*C + c*K + k]  *= ((out_value + ROUND_CONST) >> FXP_VALUE);
+                else
+                    tensor_in[n*C + c*K + k] = (out_value*tensor_in[n*C + c*K + k] + ROUND_CONST) >> FXP_VALUE;
+
+                // tensor_in[n*C + c*K + k] = tensor_in[n*C + c*K + k] / _INT8_MAX; /* divide by 127**2*/
+            }
         }
             
     }

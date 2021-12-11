@@ -9,24 +9,17 @@ import torch
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for post-training quantization of a pre-trained model",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--filename', help='filename', type=str, default='mlp_mnist_quant.th')
-    parser.add_argument('--fxp_value', help='fxp value', type=int, default=16)
+    parser.add_argument('--filename', help='filename', type=str, default='convnet_mnist_quant.th')
+    parser.add_argument('--fxp_value', help='fxp value for quantization', type=int, default=16)
     parser.add_argument('--num_bits', help='number of bits', type=int, default=8)
 
     args = parser.parse_args()
 
+    IS_CONVNET = True if 'convnet' in args.filename else False
+
     saved_stats = torch.load('../saved_models/' + args.filename)
     state_dict = saved_stats['state_dict']
     hidden_sizes = saved_stats['hidden_sizes']
-
-    num_layers = int(len(state_dict) / 3)
-    # amax = saved_stats['amax']
-
-    # for idx in range(0, 2 + len(hidden_sizes) + 1, 2):
-    #     # invert s_wx such that we can replace fixed-point division with multiplication
-    #     amax[f'net.{idx}.s_wx_inv'] = (amax[f'net.{idx}.s_x'] * amax[f'net.{idx}.s_w']) / ((2**args.num_bits - 1)**2)
-    #     amax[f'net.{idx}.s_x'] = (2**args.num_bits - 1) / amax[f'net.{idx}.s_x']
-
     
     # create header file
     with open('../src/nn_params.h', 'w') as f:
@@ -38,7 +31,9 @@ if __name__ == '__main__':
 
         f.write(f'#define INPUT_DIM {28*28}\n')
         for idx, hidden_size in enumerate(hidden_sizes, start=1):
-            f.write(f'#define HIDDEN_{idx} {hidden_size}\n')
+            f.write(f'#define H_MLP{idx} {hidden_size}\n')
+        f.write('#define H1 28\n#define W1 28\n')
+        f.write('#define C1 1\n#define C2 32\n#define C3 64\n')
         f.write(f'#define OUTPUT_DIM {10}\n')
         f.write(f'#define FXP_VALUE {args.fxp_value}\n\n')
         f.write('#include <stdint.h>\n\n\n')
@@ -46,21 +41,25 @@ if __name__ == '__main__':
 
         f.write('// quantization/dequantization constants\n')
 
-        for layer_idx in range(0, 2*num_layers, 2):
+        for layer_idx in range(1, 4):
 
-            name = f'net.{layer_idx}.s_wx_inv'.replace('.', '_')
-            value = state_dict[f'net.{layer_idx}.s_wx_inv']
-            f.write(f"extern const int {name}[{len(value)}];\n")
-
-            name = f'net.{layer_idx}.s_x'.replace('.', '_')
+            
+            name = f'layer_{layer_idx}_s_x'
             f.write(f"extern const int {name};\n")
+
+            name = f'layer_{layer_idx}_s_x_inv'
+            f.write(f"extern const int {name};\n")
+
+            name = f'layer_{layer_idx}_s_w_inv'
+            value = state_dict[name]
+            f.write(f"extern const int {name}[{len(value)}];\n")
 
 
         f.write('// Layer quantized parameters\n')
-        for layer_idx in range(0, 2*num_layers, 2):
-            name = f'net.{layer_idx}.weight'
-            param = state_dict[f'net.{layer_idx}.weight']
-            f.write(f"extern const int8_t {name.replace('.', '_')}[{len(param.flatten())}];\n")
+        for layer_idx in range(1, 4):
+            name = f'layer_{layer_idx}_weight'
+            param = state_dict[f'layer_{layer_idx}_weight']
+            f.write(f"extern const int8_t {name}[{len(param.flatten())}];\n")
 
         f.write('\n#endif // end of NN_PARAMS\n')
 
@@ -68,13 +67,17 @@ if __name__ == '__main__':
     with open('../src/nn_params.c', 'w') as f:
         f.write('#include "nn_params.h"\n\n\n')
 
-        for layer_idx in range(0, 2*num_layers, 2):
-            fxp_value = (state_dict[f'net.{layer_idx}.s_x'] * (2**args.fxp_value)).round()
-            name = f'net.{layer_idx}.s_x'.replace('.', '_')
+        for layer_idx in range(1, 4):
+            name = f'layer_{layer_idx}_s_x'
+            fxp_value = (state_dict[name] * (2**args.fxp_value)).round()
             f.write(f"const int {name} = {int(fxp_value)};\n\n")
 
-            name = f'net.{layer_idx}.s_wx_inv'.replace('.', '_')
-            fxp_value = (state_dict[f'net.{layer_idx}.s_wx_inv'] * (2**args.fxp_value)).round()
+            name = f'layer_{layer_idx}_s_x_inv'
+            fxp_value = (state_dict[name] * (2**args.fxp_value)).round()
+            f.write(f"const int {name} = {int(fxp_value)};\n\n")
+
+            name = f'layer_{layer_idx}_s_w_inv'
+            fxp_value = (state_dict[name] * (2**args.fxp_value)).round()
             f.write(f"const int {name}[{len(fxp_value)}] = {{")
 
             for idx in range(len(fxp_value)):
@@ -84,11 +87,11 @@ if __name__ == '__main__':
             f.write("};\n\n")
 
 
-        for layer_idx in range(0, 2*num_layers, 2):
-                name = f'net.{layer_idx}.weight'
-                param = state_dict[f'net.{layer_idx}.weight']
+        for layer_idx in range(1, 4):
+                name = f'layer_{layer_idx}_weight'
+                param = state_dict[f'layer_{layer_idx}_weight']
                 param = param.flatten()
-                f.write(f"const int8_t {name.replace('.', '_')}[{len(param)}] = {{")
+                f.write(f"const int8_t {name}[{len(param)}] = {{")
                 for idx in range(len(param)):
                     f.write(f"{param[idx]}")
                     if idx < len(param) - 1:

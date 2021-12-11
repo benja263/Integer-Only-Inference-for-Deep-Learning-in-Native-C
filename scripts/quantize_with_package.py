@@ -65,26 +65,30 @@ def quantize_model_params(model):
         amax (Dict): dictionary containing amax values
     """
 
-    indices = [0, 2, 4] if isinstance(model, MLP) else [0, 3, 7]
+    is_mlp = isinstance(model, MLP)
+
+    indices = [0, 2, 4] if is_mlp else [0, 3, 7]
     scale_factor = 127 # 127 for 8 bits
 
     
     state_dict = dict()
 
-    for idx in indices:
+    for layer_idx, idx in enumerate(indices, start=1):
         # quantize all parameters
         weight = model.state_dict()[f'net.{idx}.weight']
         s_w = model.state_dict()[f'net.{idx}._weight_quantizer._amax'].numpy()
         s_x = model.state_dict()[f'net.{idx}._input_quantizer._amax'].numpy()
 
         scale = weight * (scale_factor / s_w)
-        state_dict[f'net.{idx}.weight'] = torch.clamp(scale.round(), min=-127, max=127).to(int)
-        if isinstance(model, MLP):
-            state_dict[f'net.{idx}.weight'] = state_dict[f'net.{idx}.weight'].T
-        state_dict[f'net.{idx}.weight'] = state_dict[f'net.{idx}.weight'].numpy()
+        state_dict[f'layer_{layer_idx}_weight'] = torch.clamp(scale.round(), min=-127, max=127).to(int)
+        if is_mlp or layer_idx == 3:
+            state_dict[f'layer_{layer_idx}_weight'] = state_dict[f'layer_{layer_idx}_weight'].T
+        state_dict[f'layer_{layer_idx}_weight'] = state_dict[f'layer_{layer_idx}_weight'].numpy()
 
-        state_dict[f'net.{idx}.s_x'] = scale_factor / s_x
-        state_dict[f'net.{idx}.s_wx_inv'] = ((s_x*s_w) / (scale_factor**2)).squeeze()
+        state_dict[f'layer_{layer_idx}_s_x'] = 1.0 / s_x
+        state_dict[f'layer_{layer_idx}_s_x_inv'] = s_x / scale_factor
+        state_dict[f'layer_{layer_idx}_s_w_inv'] = (s_w / scale_factor).squeeze()
+        # state_dict[f'layer_{layer_idx}_s_w_inv'] = (s_w).squeeze()
         
 
     return state_dict
@@ -106,17 +110,13 @@ if __name__ == '__main__':
     state_dict = saved_stats['state_dict']
     hidden_sizes = saved_stats['hidden_sizes']
 
-    quant_desc_input = QuantDescriptor(calib_method='histogram')
-    quant_nn.QuantLinear.set_default_quant_desc_input(quant_desc_input)
-    quant_nn.QuantConv2d.set_default_quant_desc_input(quant_desc_input)
+    quant_nn.QuantLinear.set_default_quant_desc_input(QuantDescriptor(calib_method='histogram'))
+    quant_nn.QuantConv2d.set_default_quant_desc_input(QuantDescriptor(calib_method='histogram'))
     quant_modules.initialize()
 
 
     model = MLP(in_dim=28*28, hidden_sizes=hidden_sizes, out_dim=10) if 'mlp' in args.filename else ConvNet(out_dim=10)
     model.load_state_dict(state_dict)
-
-    
-    print('finished model weight quantization\n starting input/activation quantization')
     
     mnist_trainset = datasets.MNIST(root='../data', train=True, download=False, transform=transforms.Compose([
         transforms.ToTensor(),
@@ -137,3 +137,5 @@ if __name__ == '__main__':
 
     torch.save(saved_stats,
             f'../saved_models/{name}')
+    torch.save(model.state_dict(),
+            f"../saved_models/{name.replace('_quant', '_quant_test')}")
