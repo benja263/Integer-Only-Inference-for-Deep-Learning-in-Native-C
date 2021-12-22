@@ -7,13 +7,13 @@ import numpy as np
 import torch
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-from src.run_nn import load_c_lib, run_mlp, run_convnet
+from src.run_nn import load_c_lib, run_mlp, run_convnetf
 from torch.utils.data import DataLoader
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for testing post-training quantization of a pre-trained model in C",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--batch_size', help='batch size', type=int, default=50)
+    parser.add_argument('--batch_size', help='batch size', type=int, default=1)
     parser.add_argument('--network_type', help='which network to use', type=str, choices=['mlp', 'convnet'], default='convnet')
 
     args = parser.parse_args()
@@ -31,11 +31,12 @@ if __name__ == '__main__':
 
     acc = 0
     for samples, labels in test_loader:
-        samples = (samples * (2 ** 16)).round()
-        if args.network_type == 'mlp':
-            preds = run_mlp(samples, c_lib).astype(int)
-        else:
-            preds = run_convnet(samples, c_lib).astype(int)
+        # if args.network_type == 'mlp':
+        #     preds = run_mlp(samples, c_lib).astype(int)
+        # else:
+        preds = run_convnetf(samples, c_lib).astype(int)
+        # print(preds)
         acc += (torch.from_numpy(preds) == labels).sum()
+        # break
 
     print(f"Accuracy: {(acc / len(mnist_testset.data)) * 100.0:.2f}%")

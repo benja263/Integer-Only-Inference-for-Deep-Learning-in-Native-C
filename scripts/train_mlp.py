@@ -2,9 +2,7 @@
 Script for training a simple MLP for classification on the MNIST dataset
 """
 import argparse
-# from typing import Float
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.datasets as datasets
@@ -73,7 +71,6 @@ if __name__ == '__main__':
     parser.add_argument('--num_epochs', help='number of training epochs', type=int, default=10)
     parser.add_argument('--batch_size', help='batch size', type=int, default=128)
     parser.add_argument('--train_val_split', help='Train validation split ratio', type=float, default=0.8)
-    parser.add_argument('--network_type', help='which network type to use', type=str, choices=['mlp', 'convnet'], default='convnet')
 
     args = parser.parse_args()
 
@@ -91,7 +88,7 @@ if __name__ == '__main__':
         transforms.Normalize(
             (0.1307,), (0.3081,))]))
 
-    model = MLP(in_dim=28*28, out_dim=10, hidden_sizes=args.hidden_sizes) if args.network_type == 'mlp' else ConvNet(out_dim=10)
+    model = MLP(in_dim=28*28, out_dim=10, hidden_sizes=args.hidden_sizes)
 
     optimizer = Adam(model.parameters())
 
@@ -122,4 +119,4 @@ if __name__ == '__main__':
                 'train_loss': train_loss,
                 'val_loss': val_loss,
                 'test_acc': acc},
-               f'../saved_models/{args.network_type}_mnist.th')
+               f'../saved_models/mlp_mnist.th')

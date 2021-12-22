@@ -6,6 +6,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+
 void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsigned int N, const unsigned int K, const unsigned int M)
 {       
     unsigned int n, k, m;
@@ -28,16 +29,16 @@ void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsig
     }
 }
 
-int get_output_dim(int input_dim, int padding, int kernel_size, int stride, int dilation)
+
+int get_output_dim(int input_dim, int kernel_size, int stride)
 {
-    int output_dim = (input_dim + 2*padding -dilation*(kernel_size-1) - 1) / stride;
+    int output_dim = (input_dim -(kernel_size-1) - 1) / stride;
     return output_dim + 1;
 }
 
 
 void conv2d(const int8_t *x, const int8_t *w, int *y, int N, int C_in, int C_out, int H, int W, int H_new, int W_new,
-            int k_size_h, int k_size_w,  int stride_h, int stride_w, int padding_h,
-            int padding_w, int dilation_h, int dilation_w)
+            int k_size_h, int k_size_w,  int stride_h, int stride_w)
 {
     int n_i, c_out_j, c_in_i; /* sample and channels*/
     int n, m; /* kernel iterations */
@@ -86,8 +87,7 @@ void conv2d(const int8_t *x, const int8_t *w, int *y, int N, int C_in, int C_out
 
 
 void pooling2d(int *x, int *y, int N, int C_out, int H, int W, int H_new, int W_new,
-            int k_size_h, int k_size_w,  int stride_h, int stride_w, int padding_h,
-            int padding_w, int dilation_h, int dilation_w)
+            int k_size_h, int k_size_w,  int stride_h, int stride_w)
 {
     int n_i, c_out_j; /* sample and channels*/
     int n, m; /* kernel iterations */
@@ -110,7 +110,7 @@ void pooling2d(int *x, int *y, int N, int C_out, int H, int W, int H_new, int W_
                     int output_idx_y = i*W_new + j;
                     int output_idx_x = i*stride_h*W + j*stride_w;
                     
-                    int max = MIN_INT;
+                    int max = x[N_idx_x+ C_out_idx_x + output_idx_x];
                     for (n = 0; n < k_size_w; n++)
                     {
                         for (m = 0; m < k_size_h; m++)
@@ -118,6 +118,50 @@ void pooling2d(int *x, int *y, int N, int C_out, int H, int W, int H_new, int W_
                             int kernel_idx = n*W + m;
                             
                             int value = x[N_idx_x+ C_out_idx_x + kernel_idx + output_idx_x];
+                            if (value > max)
+                                max = value;
+                        }
+                    }
+                    y[N_idx_y + C_out_idx_y + output_idx_y] = max;
+                }
+                
+            }
+        }
+    }
+}
+
+void pooling2df(float *x, float *y, int N, int C_out, int H, int W, int H_new, int W_new,
+            int k_size_h, int k_size_w,  int stride_h, int stride_w)
+{
+    int n_i, c_out_j; /* sample and channels*/
+    int n, m; /* kernel iterations */
+    int i, j; /* output image iteration*/
+    
+    for (n_i = 0; n_i < N; n_i++)
+    {
+        int N_idx_y = n_i*C_out*H_new*W_new;
+        int N_idx_x = n_i*C_out*H*W;
+        
+        for (c_out_j = 0; c_out_j < C_out; c_out_j++)
+        {
+            int C_out_idx_y = c_out_j*H_new*W_new;
+            int C_out_idx_x = c_out_j*H*W;
+
+            for (i = 0; i < H_new; i++)
+            {
+                for (j = 0; j < W_new; j++)
+                {
+                    int output_idx_y = i*W_new + j;
+                    int output_idx_x = i*stride_h*W + j*stride_w;
+                    
+                    float max = x[N_idx_x+ C_out_idx_x + output_idx_x];
+                    for (n = 0; n < k_size_w; n++)
+                    {
+                        for (m = 0; m < k_size_h; m++)
+                        {
+                            int kernel_idx = n*W + m;
+                            
+                            float value = x[N_idx_x+ C_out_idx_x + kernel_idx + output_idx_x];
                             if (value > max)
                                 max = value;
                         }
@@ -139,39 +183,71 @@ void relu(int *tensor, const unsigned int size)
         tensor[i] = MAX(tensor[i], 0);
 }
 
+void reluf(float *tensor, const unsigned int size)
+{
+    unsigned int i;
+    for (i = 0; i < size; i++)
+        tensor[i] = MAX(tensor[i], 0);
+}
 
-void quantize(const int *tensor_in, int8_t *tensor_q, const int amax, const unsigned int size)
+
+void quantize(const int *tensor_in, int8_t *tensor_q, const int amax, const int amax_inv, const unsigned int size)
 {
     unsigned int i;
 
     int rounded_value, tensor_int, tensor_frac;
     // separation to integer and fraction parts
-    // int amax_int = amax >> FXP_VALUE;
-    // int amax_frac = amax - (amax_int << FXP_VALUE);
+    int amax_int = (amax + ROUND_CONST) >> FXP_VALUE;
+    int amax_frac = amax - (amax_int << FXP_VALUE);
     for (i = 0; i < size; i++)
     {
 
-        tensor_int = tensor_in[i] >> FXP_VALUE;
-        tensor_frac = tensor_in[i] - (tensor_int << FXP_VALUE);
+        tensor_int = (tensor_in[i] + ROUND_CONST) >> FXP_VALUE;
+        if (tensor_int > _INT8_MAX*amax_inv)
+            tensor_q[i] = (int8_t)INT8_MAX;
+        else if (tensor_int < -_INT8_MAX*amax_inv)
+            tensor_q[i] = -(int8_t)INT8_MAX;
+        else
+        {
+            tensor_frac = tensor_in[i] - (tensor_int << FXP_VALUE);
 
-        // rounded_value = tensor_int*amax_frac + amax_int*tensor_frac; /* int * fxp = normal multiplication with result is in fxp */
-        // rounded_value += (tensor_frac*amax_frac + ROUND_CONST) >> FXP_VALUE; /* fxp * fxp = fix-point multiplication with result is in fxp */
+            rounded_value = tensor_int*amax_frac + amax_int*tensor_frac; /* int * fxp = normal multiplication with result is in fxp */
+            rounded_value += (tensor_frac*amax_frac + ROUND_CONST) >> FXP_VALUE; /* fxp * fxp = fix-point multiplication with result is in fxp */
+
+            rounded_value = ((rounded_value + ROUND_CONST) >> FXP_VALUE) + tensor_int*amax_int; /* convert fxp to int and add to integer parts as final value should be a rounded integer */
+
+        // rounded_value = (((tensor_frac*amax + ROUND_CONST) >> FXP_VALUE) + tensor_int*amax)*_INT8_MAX;
+
+        // rounded_value =  ((rounded_value + ROUND_CONST) >> FXP_VALUE);
+
+            tensor_q[i] = (int8_t)rounded_value; /* store quantized value in output matrix */
+        }
 
 
-        // rounded_value = ((rounded_value + ROUND_CONST) >> FXP_VALUE) + tensor_int*amax_int; /* convert fxp to int and add to integer parts as final value should be a rounded integer */
-        rounded_value = (((tensor_frac*amax + ROUND_CONST) >> FXP_VALUE) + tensor_int*amax)*_INT8_MAX;
-        // if (rounded_value > (1 << FXP_VALUE))
-        //     rounded_value = ((rounded_value + ROUND_CONST) >> FXP_VALUE) * _INT8_MAX;
-        // else
-        //     rounded_value = (rounded_value*_INT8_MAX + ROUND_CONST) >> FXP_VALUE;
-        // // rounded_value = (amax_frac*tensor_in[i] + ROUND_CONST) >> FXP_VALUE;
-        rounded_value =  ((rounded_value + ROUND_CONST) >> FXP_VALUE);
-        // printf("%f %f %d ", tensor_in[i]/powf(2, 16), tensor_in[i]/powf(2, 16)*amax/powf(2, 16)* _INT8_MAX, rounded_value);
-        tensor_q[i] = (int8_t)MIN(MAX(rounded_value, _INT8_MIN), _INT8_MAX); /* store quantized value in output matrix */
-        // printf("%d ", tensor_q[i]);
+        float true_value = (float)amax/powf(2, FXP_VALUE) * (float)tensor_in[i]/powf(2, FXP_VALUE);
+        // printf("%f ", true_value);
+        // int8_t true_value_in = (int8_t)roundf(true_value);
+        // if (true_value_in != tensor_q[i])
+        //     printf("amax %f value %f supposed %d quant %d \n", (float)amax/powf(2, FXP_VALUE), (float)tensor_in[i]/powf(2, FXP_VALUE), true_value_in, tensor_q[i] ); 
     }
-//     printf("\n");
-//     exit(1);
+    // printf("\n");
+    // exit(1);
+}
+
+void quantizef(const float *tensor_in, int8_t *tensor_q, const float amax, const unsigned int size)
+{
+    unsigned int i;
+    for (i = 0; i < size; i++)
+    {
+        // printf("%f ", amax*tensor_in[i]);
+        int rounded_value = roundf(amax*tensor_in[i]);
+        // printf("%d\n", rounded_value); /* store quantized value in output matrix */
+        tensor_q[i] = (int8_t)MIN(MAX(rounded_value, _INT8_MIN), _INT8_MAX);
+
+
+        // float true_value = (float)amax/powf(2, FXP_VALUE) * (float)tensor_in[i]/powf(2, FXP_VALUE);
+        // int8_t true_value_in = (int8_t)roundf(true_value);
+    }
 }
 
 
@@ -194,6 +270,19 @@ void dequantize_per_row(int *mat_in, const int *amax_w, const int amax_x, const 
                 mat_in[n*M + k] = (out_value*mat_in[n*M + k] + ROUND_CONST) >> FXP_VALUE;
 
             // mat_in[n*M + k] = mat_in[n*M + k] / _INT8_MAX; /* divide by 127**2*/
+        }
+    }
+}
+
+void dequantize_per_rowf(int *mat_in, float *mat_out, const float *amax_w, const float amax_x, const unsigned int  N, const unsigned int  M)
+{
+    unsigned int  k, n;
+
+    for (n = 0; n < N; n++)
+    {
+        for (k = 0; k < M; k++)
+        {
+            mat_out[n*M + k] = amax_w[k] *amax_x*((float)mat_in[n*M + k]);
         }
     }
 }
@@ -225,6 +314,25 @@ void dequantize_per_channel(int *tensor_in, const int *amax_w, const int amax_x,
     }
 }
 
+void dequantize_per_channelf(int *tensor_in, float *tensor_out, const float *amax_w, const float amax_x, const unsigned int N, const unsigned int C, const unsigned int K)
+{
+    unsigned int k, n, c;
+
+    for (n = 0; n < N; n++)
+    {
+        for (c = 0; c < C; c++)
+        {
+            for (k = 0; k < K; k++)
+            {
+                
+                tensor_out[n*C + c*K + k] = amax_w[c]*amax_x*tensor_in[n*C + c*K + k];
+                // printf("%f*%f*%d=%f\n", amax_w[c], amax_x, tensor_in[n*C + c*K + k], tensor_out[n*C + c*K + k]);
+            }
+        }
+            
+    }
+}
+
 void argmax_over_cols(const int *mat_in, unsigned int *indices, const unsigned int N, const unsigned int M)
 {
 
@@ -234,6 +342,30 @@ void argmax_over_cols(const int *mat_in, unsigned int *indices, const unsigned i
     for (n = 0; n < N; n++)
     {
         row_max = MIN_INT;
+        max_idx = 0;
+        for (m = 0; m < M; m++)
+        {
+            value = mat_in[n*M + m];
+            if (value > row_max)
+            {
+                row_max = value;
+                max_idx = m; // return column
+            }
+        }
+        indices[n] = max_idx;
+    }
+}
+
+void argmax_over_colsf(const float *mat_in, unsigned int *indices, const unsigned int N, const unsigned int M)
+{
+
+    // calculate max of each row
+    unsigned int n, m, max_idx;
+    float row_max, value;
+    for (n = 0; n < N; n++)
+    {
+        row_max = mat_in[n*M];
+        // row_max = (float)MIN_INT;
         max_idx = 0;
         for (m = 0; m < M; m++)
         {

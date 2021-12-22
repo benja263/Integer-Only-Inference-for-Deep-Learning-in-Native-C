@@ -1,4 +1,4 @@
-#include "nn_params.h"
+#include "convnet_params.h"
 
 
 const int layer_1_s_x = 2949889;

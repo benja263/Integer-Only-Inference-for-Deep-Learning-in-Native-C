@@ -85,7 +85,7 @@ def quantize_model_params(model):
             state_dict[f'layer_{layer_idx}_weight'] = state_dict[f'layer_{layer_idx}_weight'].T
         state_dict[f'layer_{layer_idx}_weight'] = state_dict[f'layer_{layer_idx}_weight'].numpy()
 
-        state_dict[f'layer_{layer_idx}_s_x'] = 1.0 / s_x
+        state_dict[f'layer_{layer_idx}_s_x'] = scale_factor / s_x
         state_dict[f'layer_{layer_idx}_s_x_inv'] = s_x / scale_factor
         state_dict[f'layer_{layer_idx}_s_w_inv'] = (s_w / scale_factor).squeeze()
         # state_dict[f'layer_{layer_idx}_s_w_inv'] = (s_w).squeeze()
@@ -98,7 +98,7 @@ def quantize_model_params(model):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for post-training quantization of a pre-trained model",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--filename', help='filename', type=str, default='convnet_mnist.th')
+    parser.add_argument('--filename', help='filename', type=str, default='mlp_mnist.th')
     parser.add_argument('--num_bins', help='number of bins', type=int, default=128)
 
     args = parser.parse_args()
@@ -108,14 +108,17 @@ if __name__ == '__main__':
 
     
     state_dict = saved_stats['state_dict']
-    hidden_sizes = saved_stats['hidden_sizes']
+    
+    hidden_sizes = None if 'convnet' in args.filename else saved_stats['hidden_sizes']
+    channel_sizes = None if 'mlp' in args.filename else saved_stats['channel_sizes']
+    
 
     quant_nn.QuantLinear.set_default_quant_desc_input(QuantDescriptor(calib_method='histogram'))
     quant_nn.QuantConv2d.set_default_quant_desc_input(QuantDescriptor(calib_method='histogram'))
     quant_modules.initialize()
 
 
-    model = MLP(in_dim=28*28, hidden_sizes=hidden_sizes, out_dim=10) if 'mlp' in args.filename else ConvNet(out_dim=10)
+    model = MLP(in_dim=28*28, hidden_sizes=hidden_sizes, out_dim=10) if 'mlp' in args.filename else ConvNet(channel_sizes=channel_sizes, out_dim=10)
     model.load_state_dict(state_dict)
     
     mnist_trainset = datasets.MNIST(root='../data', train=True, download=False, transform=transforms.Compose([

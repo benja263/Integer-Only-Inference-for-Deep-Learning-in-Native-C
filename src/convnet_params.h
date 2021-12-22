@@ -1,13 +1,13 @@
 /*******************************************************************
-@file nn_params.h
+@file convnet_params.h
 *  @brief variable prototypes for model parameters and amax values
 *
 *
 *  @author Benjamin Fuhrer
 *
 *******************************************************************/
-#ifndef NN_PARAMS
-#define NN_PARAMS
+#ifndef CONVNET_PARAMS
+#define CONVNET_PARAMS
 
 #define INPUT_DIM 784
 #define H1 28
@@ -54,4 +54,4 @@ extern const int8_t layer_1_weight[144];
 extern const int8_t layer_2_weight[2304];
 extern const int8_t layer_3_weight[4000];
 
-#endif // end of NN_PARAMS
+#endif // end of CONVNET_PARAMS

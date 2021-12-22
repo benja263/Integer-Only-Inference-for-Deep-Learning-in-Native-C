@@ -10,7 +10,7 @@
 #ifndef NN_H
 #define NN_H
 
-#include "nn_params.h"
+#include "convnet_params.h"
 
 void linear_layer(const int *x, const int8_t *w, int *output, const int x_amax_quant,
                   const int *w_amax_dequant, const int x_amax_dequant, const unsigned int N,  const unsigned int K,
@@ -31,14 +31,8 @@ void linear_layer(const int *x, const int8_t *w, int *output, const int x_amax_q
  */
 
 
-void run_mlp(int *x, const unsigned int N, unsigned int *class_indices);
-/**
- * @brief Function to run an mlp for classification
- * 
- * @param x - NxK input matrix
- * @param N
- * @param class_indices - Nx1 vector for storing class index prediction
- */
+void run_convnet(int *x, unsigned int *class_indices);
 
-void run_convnet(int *x, const unsigned int N, unsigned int *class_indices);
+
+void run_convnetf(float *x, unsigned int *class_indices);
 #endif 
