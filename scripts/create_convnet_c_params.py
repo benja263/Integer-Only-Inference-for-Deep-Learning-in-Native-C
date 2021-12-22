@@ -14,9 +14,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for post-training quantization of a pre-trained model",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--filename', help='filename', type=str, default='convnet_mnist_quant.th')
-    parser.add_argument('--fxp_value', help='fxp value for quantization', type=int, default=16)
     parser.add_argument('--num_bits', help='number of bits', type=int, default=8)
-    parser.add_argument('--batch_size', help='input batch size', type=int, default=1)
 
     args = parser.parse_args()
 
@@ -48,8 +46,7 @@ if __name__ == '__main__':
         f.write(f'#define H1 28\n#define W1 28\n#define H1_conv {H1_conv}\n#define W1_conv {W1_conv}\n#define H1_pool {H1_pool}\n#define W1_pool {W1_pool}\n')
         f.write(f'#define H2_conv {H2_conv}\n#define W2_conv {W2_conv}\n#define H2_pool {H2_pool}\n#define W2_pool {W2_pool}\n')
         f.write(f'#define C0 1\n#define C1 {channel_sizes[0]}\n#define C2 {channel_sizes[1]}\n')
-        f.write(f'#define OUTPUT_DIM {10}\n')
-        f.write(f'#define FXP_VALUE {args.fxp_value}\n#define BATCH_SIZE {args.batch_size}\n\n')
+        f.write(f'#define OUTPUT_DIM {10}\n\n')
         f.write('#include <stdint.h>\n\n\n')
 
 
@@ -68,17 +65,6 @@ if __name__ == '__main__':
             value = state_dict[name]
             f.write(f"extern const int {name}[{len(value)}];\n")
 
-            name = f'layer_{layer_idx}_s_x_f'
-            f.write(f"extern const float {name};\n")
-
-            name = f'layer_{layer_idx}_s_x_inv_f'
-            f.write(f"extern const float {name};\n")
-
-            name = f'layer_{layer_idx}_s_w_inv_f'
-            value = state_dict[name.replace('_f', '')]
-            f.write(f"extern const float {name}[{len(value)}];\n")
-
-
         f.write('// Layer quantized parameters\n')
         for layer_idx in range(1, 4):
             name = f'layer_{layer_idx}_weight'
@@ -93,15 +79,15 @@ if __name__ == '__main__':
 
         for layer_idx in range(1, 4):
             name = f'layer_{layer_idx}_s_x'
-            fxp_value = (state_dict[name] * (2**args.fxp_value)).round()
+            fxp_value = (state_dict[name] * (2**16)).round()
             f.write(f"const int {name} = {int(fxp_value)};\n\n")
 
             name = f'layer_{layer_idx}_s_x_inv'
-            fxp_value = (state_dict[name] * (2**args.fxp_value)).round()
+            fxp_value = (state_dict[name] * (2**16)).round()
             f.write(f"const int {name} = {int(fxp_value)};\n\n")
 
             name = f'layer_{layer_idx}_s_w_inv'
-            fxp_value = (state_dict[name] * (2**args.fxp_value)).round()
+            fxp_value = (state_dict[name] * (2**16)).round()
             f.write(f"const int {name}[{len(fxp_value)}] = {{")
 
             for idx in range(len(fxp_value)):
@@ -109,25 +95,6 @@ if __name__ == '__main__':
                 if idx < len(fxp_value) - 1:
                      f.write(", ")
             f.write("};\n\n")
-
-            name = f'layer_{layer_idx}_s_x'
-            value = state_dict[name]
-            f.write(f"const float {name}_f = {float(value)};\n\n")
-
-            name = f'layer_{layer_idx}_s_x_inv'
-            value = state_dict[name]
-            f.write(f"const float {name}_f = {float(value)};\n\n")
-
-            name = f'layer_{layer_idx}_s_w_inv'
-            value = state_dict[name]
-            f.write(f"const float {name}_f[{len(value)}] = {{")
-
-            for idx in range(len(value)):
-                f.write(f"{float(value[idx])}")
-                if idx < len(value) - 1:
-                     f.write(", ")
-            f.write("};\n\n")
-
 
         for layer_idx in range(1, 4):
                 name = f'layer_{layer_idx}_weight'

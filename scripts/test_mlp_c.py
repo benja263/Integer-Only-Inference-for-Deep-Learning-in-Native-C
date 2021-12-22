@@ -7,14 +7,13 @@ import numpy as np
 import torch
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
-from src.run_nn import load_c_lib, run_mlp, run_convnetf
+from src.run_nn import load_c_lib, run_mlp
 from torch.utils.data import DataLoader
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for testing post-training quantization of a pre-trained model in C",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--batch_size', help='batch size', type=int, default=1)
-    parser.add_argument('--network_type', help='which network to use', type=str, choices=['mlp', 'convnet'], default='convnet')
 
     args = parser.parse_args()
 
@@ -27,15 +26,14 @@ if __name__ == '__main__':
     
     test_loader = DataLoader(mnist_testset, batch_size=args.batch_size, num_workers=1, shuffle=False)
     # load c library
-    c_lib = load_c_lib()
+    c_lib = load_c_lib(library='mlp.so')
 
     acc = 0
     for samples, labels in test_loader:
-        # if args.network_type == 'mlp':
-        #     preds = run_mlp(samples, c_lib).astype(int)
-        # else:
-        preds = run_convnetf(samples, c_lib).astype(int)
-        # print(preds)
+        samples = (samples * (2 ** 16)).round()
+
+        preds = run_mlp(samples, c_lib).astype(int)
+
         acc += (torch.from_numpy(preds) == labels).sum()
         # break
 

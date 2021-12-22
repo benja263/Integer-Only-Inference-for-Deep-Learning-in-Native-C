@@ -14,9 +14,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for post-training quantization of a pre-trained model",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--filename', help='filename', type=str, default='mlp_mnist_quant.th')
-    parser.add_argument('--fxp_value', help='fxp value for quantization', type=int, default=16)
     parser.add_argument('--num_bits', help='number of bits', type=int, default=8)
-    parser.add_argument('--batch_size', help='input batch size', type=int, default=10)
 
     args = parser.parse_args()
 
@@ -41,7 +39,6 @@ if __name__ == '__main__':
             f.write(f'#define H{idx} {hidden_size}\n')
 
         f.write(f'#define OUTPUT_DIM {10}\n')
-        f.write(f'#define FXP_VALUE {args.fxp_value}\n#define BATCH_SIZE {args.batch_size}\n\n')
         f.write('#include <stdint.h>\n\n\n')
 
 
@@ -85,15 +82,15 @@ if __name__ == '__main__':
 
         for layer_idx in range(1, 4):
             name = f'layer_{layer_idx}_s_x'
-            fxp_value = (state_dict[name] * (2**args.fxp_value)).round()
+            fxp_value = (state_dict[name] * (2**16)).round()
             f.write(f"const int {name} = {int(fxp_value)};\n\n")
 
             name = f'layer_{layer_idx}_s_x_inv'
-            fxp_value = (state_dict[name] * (2**args.fxp_value)).round()
+            fxp_value = (state_dict[name] * (2**16)).round()
             f.write(f"const int {name} = {int(fxp_value)};\n\n")
 
             name = f'layer_{layer_idx}_s_w_inv'
-            fxp_value = (state_dict[name] * (2**args.fxp_value)).round()
+            fxp_value = (state_dict[name] * (2**16)).round()
             f.write(f"const int {name}[{len(fxp_value)}] = {{")
 
             for idx in range(len(fxp_value)):

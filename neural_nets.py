@@ -1,6 +1,7 @@
+"""
+Module containing neural network architectures (MLP and ConvNet)
+"""
 import torch.nn as nn
-import torch
-
 
 class MLP(nn.Module):
     def __init__(self, in_dim, out_dim, hidden_sizes, activation=nn.ReLU):

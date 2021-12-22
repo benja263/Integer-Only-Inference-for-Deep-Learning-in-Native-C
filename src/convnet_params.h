@@ -24,7 +24,6 @@
 #define C1 16
 #define C2 16
 #define OUTPUT_DIM 10
-#define FXP_VALUE 16
 #define BATCH_SIZE 1
 
 #include <stdint.h>
@@ -34,21 +33,12 @@
 extern const int layer_1_s_x;
 extern const int layer_1_s_x_inv;
 extern const int layer_1_s_w_inv[16];
-extern const float layer_1_s_x_f;
-extern const float layer_1_s_x_inv_f;
-extern const float layer_1_s_w_inv_f[16];
 extern const int layer_2_s_x;
 extern const int layer_2_s_x_inv;
 extern const int layer_2_s_w_inv[16];
-extern const float layer_2_s_x_f;
-extern const float layer_2_s_x_inv_f;
-extern const float layer_2_s_w_inv_f[16];
 extern const int layer_3_s_x;
 extern const int layer_3_s_x_inv;
 extern const int layer_3_s_w_inv[10];
-extern const float layer_3_s_x_f;
-extern const float layer_3_s_x_inv_f;
-extern const float layer_3_s_w_inv_f[10];
 // Layer quantized parameters
 extern const int8_t layer_1_weight[144];
 extern const int8_t layer_2_weight[2304];
