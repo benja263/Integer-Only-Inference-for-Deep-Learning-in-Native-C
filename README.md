@@ -14,14 +14,14 @@ pytorch-quantization allows for more sophisticated quantization methods then wha
 ## C-code
 The c-code is structured to have separate files for the MLP model and the ConvNet model.  
 C-code is located within the `src` directory in which:
-- nn_math - source and header files contain relevant mathematical functions
-- nn - source and header files contain relevant layers to create the neural network models
-- mlp - source and header files contains the MLP architecture to run for inference
-- convnet - source and header files contains the ConvNet architecture to run for inference
-- mlp_params - source and header files are generated via `scripts/create_mlp_c_params.py` and contains network weights, scale factors, and other relevant constants for the MLP model
-- convnet_params - source and header files are generated via `scripts/create_convnet_c_params.py` and contains network weights, scale factors, and other relevant constants for the ConvNet model
+- `nn_math` - source and header files contain relevant mathematical functions
+- `nn` - source and header files contain relevant layers to create the neural network models
+- `mlp` - source and header files contains the MLP architecture to run for inference
+- `convnet` - source and header files contains the ConvNet architecture to run for inference
+- `mlp_params` - source and header files are generated via `scripts/create_mlp_c_params.py` and contains network weights, scale factors, and other relevant constants for the MLP model
+- `convnet_params` - source and header files are generated via `scripts/create_convnet_c_params.py` and contains network weights, scale factors, and other relevant constants for the ConvNet model
 ### Complilation
-The repository was tested using gcc
+The repository was tested using gcc.  
 To compile and generate a shared library that can be called from Python using c-types run the following commands:
 #### MLP
 ```
@@ -82,5 +82,5 @@ Evaluating integer-only C model on test data
 Accuracy: 98.58%
 ```
 # References
-Wu, H., Judd, P., Zhang, X., Isaev, M., &#38; Micikevicius, P. (2020). <i>Integer Quantization for Deep Learning Inference: Principles and Empirical Evaluation</i>. http://arxiv.org/abs/2004.09602
-Tessler, C., Shpigelman, Y., Dalal, G., Mandelbaum, A., Kazakov, D. H., Fuhrer, B., Chechik, G., &#38; Mannor, S. (2021). <i>Reinforcement Learning for Datacenter Congestion Control</i>. http://arxiv.org/abs/2102.09337
+[1] Wu, H., Judd, P., Zhang, X., Isaev, M., &#38; Micikevicius, P. (2020). <i>Integer Quantization for Deep Learning Inference: Principles and Empirical Evaluation</i>. http://arxiv.org/abs/2004.09602
+[2] Tessler, C., Shpigelman, Y., Dalal, G., Mandelbaum, A., Kazakov, D. H., Fuhrer, B., Chechik, G., &#38; Mannor, S. (2021). <i>Reinforcement Learning for Datacenter Congestion Control</i>. http://arxiv.org/abs/2102.09337
