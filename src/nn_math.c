@@ -1,29 +1,24 @@
 
 #include "nn_math.h"
 
-#include <stdio.h>
-
-#include <math.h>
-#include <stdlib.h>
-
 void mat_mult(const int8_t *mat_l, const int8_t *mat_r, int *result, const unsigned int N, const unsigned int K, const unsigned int M)
 {       
     unsigned int n, k, m;
     unsigned int row, col;
-    int sum_;
+    int accumulator;
 
     for (m = 0; m < M; m++)
     {
         for (n = 0; n < N; n++)
         {
             row = n*K;
-            sum_ = 0;
+            accumulator = 0;
             for (k = 0; k < K; k++)
             {
                 col = k*M;
-                sum_ += mat_l[row + k] * mat_r[col + m];
+                accumulator += mat_l[row + k] * mat_r[col + m];
             }
-            result[n*M + m] = sum_;
+            result[n*M + m] = accumulator;
         }
     }
 }
@@ -137,39 +132,40 @@ void relu(int *tensor, const unsigned int size)
         tensor[i] = MAX(tensor[i], 0);
 }
 
-void quantize(const int *tensor_in, int8_t *tensor_q, const int amax, const int amax_inv, const unsigned int size)
+void quantize(const int *tensor_in, int8_t *tensor_q, const int scale_factor,
+              const int scale_factor_inv, const unsigned int size)
 {
     unsigned int i;
-
     int rounded_value, tensor_int, tensor_frac;
     // separation to integer and fraction parts
-    int amax_int = (amax + ROUND_CONST) >> FXP_VALUE;
-    int amax_frac = amax - (amax_int << FXP_VALUE);
-
+    int scale_factor_int = (scale_factor + ROUND_CONST) >> FXP_VALUE;
+    int scale_factor_frac = scale_factor - (scale_factor_int << FXP_VALUE);
+	// element wise operation - we iterate throughout the entire length of the flattened tensor
     for (i = 0; i < size; i++)
     {
-
         tensor_int = (tensor_in[i] + ROUND_CONST) >> FXP_VALUE;
-        if (tensor_int > INT8_MAX_VALUE*amax_inv)
+        if (tensor_int > INT8_MAX_VALUE*scale_factor_inv)
             tensor_q[i] = (int8_t)INT8_MAX_VALUE;
-        else if (tensor_int < -INT8_MAX_VALUE*amax_inv)
+        else if (tensor_int < -INT8_MAX_VALUE*scale_factor_inv)
             tensor_q[i] = -(int8_t)INT8_MAX_VALUE;
         else
         {
             tensor_frac = tensor_in[i] - (tensor_int << FXP_VALUE);
+			// int * fxp = result is in fxp */
+            rounded_value = tensor_int*scale_factor_frac + scale_factor_int*tensor_frac; 
+            // fxp * fxp = fix-point multiplication with result is in fxp */
+            rounded_value += (tensor_frac*scale_factor_frac + ROUND_CONST) >> FXP_VALUE; 
+			// convert fxp to int and add to integer parts as final value should be a rounded integer
+            rounded_value = ((rounded_value + ROUND_CONST) >> FXP_VALUE) + tensor_int*scale_factor_int; 
 
-            rounded_value = tensor_int*amax_frac + amax_int*tensor_frac; /* int * fxp = normal multiplication with result is in fxp */
-            rounded_value += (tensor_frac*amax_frac + ROUND_CONST) >> FXP_VALUE; /* fxp * fxp = fix-point multiplication with result is in fxp */
-
-            rounded_value = ((rounded_value + ROUND_CONST) >> FXP_VALUE) + tensor_int*amax_int; /* convert fxp to int and add to integer parts as final value should be a rounded integer */
-
-            tensor_q[i] = (int8_t)rounded_value; /* store quantized value in output matrix */
+            tensor_q[i] = (int8_t)rounded_value; /* store quantized value in output tensor */
         }
     }
 }
 
 
-void dequantize_per_row(int *mat_in, const int *amax_w, const int amax_x, const unsigned int  N, const unsigned int  M)
+void dequantize_per_row(int *mat_in, const int *scale_factor_w_inv, const int scale_factor_x_inv,
+                         const unsigned int  N, const unsigned int  M)
 {
     unsigned int  k, n;
 
@@ -181,7 +177,7 @@ void dequantize_per_row(int *mat_in, const int *amax_w, const int amax_x, const 
         for (k = 0; k < M; k++)
         {
             
-            out_value = amax_w[k] *amax_x;
+            out_value = scale_factor_w_inv[k] * scale_factor_x_inv;
             if (out_value > (1 << FXP_VALUE))
                 mat_in[n*M + k]  *= ((out_value + ROUND_CONST) >> FXP_VALUE);
             else

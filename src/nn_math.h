@@ -51,25 +51,28 @@ void relu(int *tensor_in, const unsigned int size);
  */
 
 
-void quantize(const int *tensor_in, int8_t *tensor_q, const int amax, const int amax_inv, const unsigned int size);
+void quantize(const int *tensor_in, int8_t *tensor_q, const int scale_factor,
+              const int scale_factor_inv, const unsigned int size);
 /**
  * @brief Scale quantization of a tensor by a single amax value
  * 
  * @param tensor_in - input tensor
  * @param tensor_q - output quantized tensor
- * @param amax - amax value
+ * @param scale_factor - 127 / amax
+ * @param scale_factor_inv - 1 / scale_factor
  * @param size - size of flattened tensor
  * @return Void
  */
 
-void dequantize_per_row(int *mat_in, const int *amax_w, const int amax_x, const unsigned int N, const unsigned int M);
+void dequantize_per_row(int *mat_in, const int *scale_factor_w_inv, const int scale_factor_x_inv, const unsigned int  N, const unsigned int  M);
 /**
  * @brief Scale dequantization with per-row granulity
  * Each row is multiplied by the corresponding column amax value
  * offline calculate reciprocal(amax) so we can replace division by multiplication
  * 
  * @param mat_in - NxM input matrix to dequantize
- * @param amax -1XM row vector of amax values
+ * @param scale_factor_w_inv -1XM row vector of layer's weight matrix scale factor values
+ * @param scale_factor_x_inv - input inverse scale factor
  * @param N
  * @param M
  * @return Void

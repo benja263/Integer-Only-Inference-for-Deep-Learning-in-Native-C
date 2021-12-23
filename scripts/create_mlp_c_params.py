@@ -2,7 +2,7 @@
 Script for writing param header and source files in C with weights and amax values calculate in python
 """
 import argparse
-import subprocess
+from pathlib import Path
 
 import torch
 
@@ -14,13 +14,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for post-training quantization of a pre-trained model",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--filename', help='filename', type=str, default='mlp_mnist_quant.th')
-    parser.add_argument('--num_bits', help='number of bits', type=int, default=8)
+    parser.add_argument('--save_dir', help='save directory', default='../saved_models', type=Path)
 
     args = parser.parse_args()
 
-    IS_CONVNET = True if 'convnet' in args.filename else False
-
-    saved_stats = torch.load('../saved_models/' + args.filename)
+    saved_stats = torch.load(args.save_dir / + args.filename)
     state_dict = saved_stats['state_dict']
     hidden_sizes = saved_stats['hidden_sizes']
 

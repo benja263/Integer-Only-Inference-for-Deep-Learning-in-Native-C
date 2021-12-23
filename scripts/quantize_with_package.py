@@ -1,20 +1,20 @@
-import sys
-
-sys.path.append('/swgwork/bfuhrer/projects/rl_packages/TensorRT/tools/pytorch-quantization/pytorch_quantization')
-
+"""
+Script for PTQ using pytorch-quantization package
+"""
 import argparse
+from pathlib import Path
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from neural_nets import MLP, ConvNet
-from torch.utils.data import DataLoader
-import numpy as np
-
-from pytorch_quantization import nn as quant_nn
 from pytorch_quantization import calib
-from pytorch_quantization.tensor_quant import QuantDescriptor
+from pytorch_quantization import nn as quant_nn
 from pytorch_quantization import quant_modules
+from pytorch_quantization.tensor_quant import QuantDescriptor
+from torch.utils.data import DataLoader
 
 
 def collect_stats(model, data_loader, num_bins):
@@ -67,7 +67,7 @@ def quantize_model_params(model):
 
     is_mlp = isinstance(model, MLP)
 
-    indices = [0, 2, 4] if is_mlp else [0, 3, 7]
+    indices = [0, 2, 4] if is_mlp else [0, 3, 7] 
     scale_factor = 127 # 127 for 8 bits
 
     
@@ -87,9 +87,7 @@ def quantize_model_params(model):
 
         state_dict[f'layer_{layer_idx}_s_x'] = scale_factor / s_x
         state_dict[f'layer_{layer_idx}_s_x_inv'] = s_x / scale_factor
-        state_dict[f'layer_{layer_idx}_s_w_inv'] = (s_w / scale_factor).squeeze()
-        # state_dict[f'layer_{layer_idx}_s_w_inv'] = (s_w).squeeze()
-        
+        state_dict[f'layer_{layer_idx}_s_w_inv'] = (s_w / scale_factor).squeeze()        
 
     return state_dict
         
@@ -100,10 +98,12 @@ if __name__ == '__main__':
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--filename', help='filename', type=str, default='mlp_mnist.th')
     parser.add_argument('--num_bins', help='number of bins', type=int, default=128)
+    parser.add_argument('--data_dir', help='directory of folder containing the MNIST dataset', default='../data')
+    parser.add_argument('--save_dir', help='save directory', default='../saved_models', type=Path)
 
     args = parser.parse_args()
     # load model
-    saved_stats = torch.load('../saved_models/' + args.filename)
+    saved_stats = torch.load(args.save_dir + args.filename)
 
 
     
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     model = MLP(in_dim=28*28, hidden_sizes=hidden_sizes, out_dim=10) if 'mlp' in args.filename else ConvNet(channel_sizes=channel_sizes, out_dim=10)
     model.load_state_dict(state_dict)
     
-    mnist_trainset = datasets.MNIST(root='../data', train=True, download=False, transform=transforms.Compose([
+    mnist_trainset = datasets.MNIST(root=args.data_dir train=True, download=False, transform=transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(
             (0.1307,), (0.3081,))]))
@@ -139,6 +139,4 @@ if __name__ == '__main__':
     name = args.filename.replace('.th', '_quant.th')
 
     torch.save(saved_stats,
-            f'../saved_models/{name}')
-    torch.save(model.state_dict(),
-            f"../saved_models/{name.replace('_quant', '_quant_test')}")
+               args.save_dir / name)

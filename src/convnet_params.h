@@ -24,7 +24,6 @@
 #define C1 16
 #define C2 16
 #define OUTPUT_DIM 10
-#define BATCH_SIZE 1
 
 #include <stdint.h>
 

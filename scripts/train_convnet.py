@@ -2,6 +2,7 @@
 Script for training a simple MLP for classification on the MNIST dataset
 """
 import argparse
+from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -71,11 +72,13 @@ if __name__ == '__main__':
     parser.add_argument('--num_epochs', help='number of training epochs', type=int, default=10)
     parser.add_argument('--batch_size', help='batch size', type=int, default=128)
     parser.add_argument('--train_val_split', help='Train validation split ratio', type=float, default=0.8)
+    parser.add_argument('--data_dir', help='directory of folder containing the MNIST dataset', default='../data')
+    parser.add_argument('--save_dir', help='save directory', default='../saved_models', type=Path)
 
 
     args = parser.parse_args()
 
-    mnist_trainset = datasets.MNIST(root='../data', train=True, download=False, transform=transforms.Compose([
+    mnist_trainset = datasets.MNIST(root=args.data_dir, train=True, download=False, transform=transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(
             (0.1307,), (0.3081,))]))
@@ -84,7 +87,7 @@ if __name__ == '__main__':
     split_r = args.train_val_split
     mnist_trainset, mnist_valset = random_split(mnist_trainset, [round(len(mnist_trainset)*split_r), round(len(mnist_trainset)*(1 - split_r))])
 
-    mnist_testset = datasets.MNIST(root='../data', train=False, download=False, transform=transforms.Compose([
+    mnist_testset = datasets.MNIST(root=args.data_dir, train=False, download=False, transform=transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(
             (0.1307,), (0.3081,))]))
@@ -98,7 +101,7 @@ if __name__ == '__main__':
     train_loader = DataLoader(mnist_trainset, batch_size=args.batch_size, num_workers=1, shuffle=True)
     val_loader = DataLoader(mnist_valset, batch_size=args.batch_size, num_workers=1, shuffle=True)
     test_loader = DataLoader(mnist_testset, batch_size=args.batch_size, num_workers=1, shuffle=True)
-
+    print('Training')
     for epoch in range(args.num_epochs):
         train_loss = train_epoch(model, train_loader, optimizer, loss_fnc)
         val_loss = eval_epoch(model, val_loader, loss_fnc)
@@ -120,4 +123,4 @@ if __name__ == '__main__':
                 'train_loss': train_loss,
                 'val_loss': val_loss,
                 'test_acc': acc},
-               f'../saved_models/convnet_mnist.th')
+                args.save_dor / 'convnet_mnist.th')

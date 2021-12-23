@@ -11,9 +11,10 @@
 
 #include <stdint.h>
 
-void linear_layer(const int *x, const int8_t *w, int *output, const int x_amax_quant,
-                  const int *w_amax_dequant, const int x_amax_dequant, const unsigned int N,  const unsigned int K,
-                  const unsigned int M, const unsigned int not_output);
+void linear_layer(const int *x, const int8_t *w, int *output, const int x_scale_factor,
+                  const int *w_scale_factor_inv, const int x_scale_factor_inv,
+                  const unsigned int N,  const unsigned int K,
+                  const unsigned int M, const unsigned int not_output_layer);
 /**
  * @brief A neural network linear layer withthout bias  Y = ReLU(XW)
  *  x is quantized before multiplication with w and then dequantized per-row granulity prior to the activation function
@@ -26,14 +27,17 @@ void linear_layer(const int *x, const int8_t *w, int *output, const int x_amax_q
  * @param N
  * @param K
  * @param M
- * @param not_output - boolean value if layer is output layer (no activation)
+ * @param hidden_layer - boolean value if layer is a hidden layer (activation)
  * 
  * @return Void
  */
 
-void conv2d_layer(const int *x, const int8_t *w,int *output, const int x_amax_quant, const int *w_amax_dequant, const int x_amax_dequant,
-                  const unsigned int N, const unsigned int C_in, const unsigned int C_out, const int H, const int W,
-                  const int H_conv, const int W_conv, const int k_size_h, const int k_size_w,  const int stride_h, const int stride_w);
+void conv2d_layer(const int *x, const int8_t *w,int *output, const int x_scale_factor,
+                  const int *w_scale_factor_inv, const int x_scale_factor_inv,
+                  const unsigned int N, const unsigned int C_in, const unsigned int C_out,
+                  const int H, const int W,
+                  const int H_conv, const int W_conv, const int k_size_h, const int k_size_w,
+                  const int stride_h, const int stride_w);
 /**
  * @brief A neural network 2D convolutional layer with ReLU activation function
  *  x is quantized before the convolution operation and then dequantized with per-column granulity prior to the activation function

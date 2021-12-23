@@ -2,9 +2,10 @@
 Script for writing param header and source files in C with weights and amax values calculate in python
 """
 import argparse
-import subprocess
+from pathlib import Path
 
 import torch
+
 
 def get_output_dim(input_dim, kernel_size, stride):
             output_dim = (input_dim -(kernel_size-1) - 1) / stride
@@ -13,12 +14,12 @@ def get_output_dim(input_dim, kernel_size, stride):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Script for post-training quantization of a pre-trained model",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--filename', help='filename', type=str, default='convnet_mnist_quant.th')
-    parser.add_argument('--num_bits', help='number of bits', type=int, default=8)
+    parser.add_argument('--filename', help='filename of quantized model', type=str, default='convnet_mnist_quant.th')
+    parser.add_argument('--save_dir', help='save directory', default='../saved_models', type=Path)
 
     args = parser.parse_args()
 
-    saved_stats = torch.load('../saved_models/' + args.filename)
+    saved_stats = torch.load(args.save_dir / + args.filename)
     state_dict = saved_stats['state_dict']
     channel_sizes = saved_stats['channel_sizes']
 
@@ -47,7 +48,7 @@ if __name__ == '__main__':
         f.write(f'#define H2_conv {H2_conv}\n#define W2_conv {W2_conv}\n#define H2_pool {H2_pool}\n#define W2_pool {W2_pool}\n')
         f.write(f'#define C0 1\n#define C1 {channel_sizes[0]}\n#define C2 {channel_sizes[1]}\n')
         f.write(f'#define OUTPUT_DIM {10}\n\n')
-        f.write('#include <stdint.h>\n\n\n')
+        f.write('#include <stdint.h>\n\n\n') 
 
 
         f.write('// quantization/dequantization constants\n')
