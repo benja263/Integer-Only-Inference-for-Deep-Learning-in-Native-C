@@ -82,5 +82,5 @@ Evaluating integer-only C model on test data
 Accuracy: 98.58%
 ```
 # References
-[1] Wu, H., Judd, P., Zhang, X., Isaev, M., &#38; Micikevicius, P. (2020). <i>Integer Quantization for Deep Learning Inference: Principles and Empirical Evaluation</i>. http://arxiv.org/abs/2004.09602
+[1] Wu, H., Judd, P., Zhang, X., Isaev, M., &#38; Micikevicius, P. (2020). <i>Integer Quantization for Deep Learning Inference: Principles and Empirical Evaluation</i>. http://arxiv.org/abs/2004.09602  
 [2] Tessler, C., Shpigelman, Y., Dalal, G., Mandelbaum, A., Kazakov, D. H., Fuhrer, B., Chechik, G., &#38; Mannor, S. (2021). <i>Reinforcement Learning for Datacenter Congestion Control</i>. http://arxiv.org/abs/2102.09337
