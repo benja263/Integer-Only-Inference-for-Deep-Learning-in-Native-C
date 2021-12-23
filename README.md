@@ -1,8 +1,9 @@
-# Uniform Quantization for Integer-Only Inference using Native C
-A repository containing Native C-code implementation of a convolutional neural network and multi-layer preceptron (MLP) models.  
-The repository contains scripts for training these models with PyTorch, writing the relevant parameters in C, and running interfacing the C code for inference via C-types.  
+# Integer-Only Inference for Deep Learning in Native C
+A repository containing Native C-code implementation of a convolutional neural network and multi-layer perceptron (MLP) models for integer-only inference. Model parameters are quantized to 8-bit integers and floats are replaced with the fixed-point representation.  
+The repository contains scripts for training model with PyTorch, post-training quantization of model parameters to 8-bit integers, writing the relevant parameters in C, and interfacing the C code for integer-only inference via C-types.   
 
 The ideas presented in this tutorial were used to quantize and write an inference only C code to deploy a deep reinforcement learning algorithm on a network interface card (NIC) in Tessler et al. 2021. 
+
 
 # Requirements
 Quantization is based on Nvidia's pytorch-quantization, which is part of TensorRT.  
