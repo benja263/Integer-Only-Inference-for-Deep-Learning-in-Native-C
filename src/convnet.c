@@ -3,11 +3,6 @@
 #include "nn.h"
 #include "nn_math.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-
-
-
 void run_convnet(const int *x, unsigned int *class_indices)
 {
     

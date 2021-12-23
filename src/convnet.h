@@ -10,7 +10,7 @@
 #ifndef CONVNET_H
 #define CONVNET_H
 
-#define BATCH_SIZE 1
+#define BATCH_SIZE 1 // don't use larger batches to avoid stack overflow
 
 #include "convnet_params.h"
 
