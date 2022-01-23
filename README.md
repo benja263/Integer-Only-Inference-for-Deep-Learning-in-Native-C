@@ -45,7 +45,7 @@ gcc -shared convnet_params.o convnet.o nn_math.o nn.o -o convnet.so
 - `src/test_mlp_c.py` and `src/test_convnet_c.py` run inference on the models using C-types to interface the C-code files from Python
 
 
-## Results
+## Results - on the MNIST dataset
 ### MLP
 ```
 Training 
