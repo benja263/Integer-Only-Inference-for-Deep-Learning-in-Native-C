@@ -11,7 +11,7 @@ The ideas presented in this tutorial were used to quantize and write an inferenc
 
 # Requirements
 Quantization is based on Nvidia's pytorch-quantization, which is part of TensorRT.  
-https://github.com/NVIDIA/TensorRT/tree/master/tools/pytorch-quantization
+https://github.com/NVIDIA/TensorRT/tree/master/tools/pytorch-quantization  
 pytorch-quantization allows for more sophisticated quantization methods than what is presented here. For more details, see Hao et al. 2020[2].
 
 **NOTE** pytorch-quantization requires a GPU and will not work without it
@@ -30,12 +30,12 @@ The repository was tested using gcc.
 To compile and generate a shared library that can be called from Python using c-types run the following commands:
 #### MLP
 ```
-gcc -Wall -fPIC -c mlp_params.c mlp.c nn_math.c nn.c
+gcc -Wall -fPIC -c mlp_params.c mlp.c nn_math.c nn.c  
 gcc -shared mlp_params.o mlp.o nn_math.o nn.o -o mlp.so
 ```
 #### ConvNet
 ```
-gcc -Wall -fPIC -c convnet_params.c convnet.c nn_math.c nn.c
+gcc -Wall -fPIC -c convnet_params.c convnet.c nn_math.c nn.c  
 gcc -shared convnet_params.o convnet.o nn_math.o nn.o -o convnet.so
 ```
 ## Scripts
